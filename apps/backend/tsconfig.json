@@ -1,0 +1,14 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+   "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+     "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "typeRoots": ["./src/types", "./node_modules/@types"]
+  },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"]
+
+}

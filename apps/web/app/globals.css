@@ -1,0 +1,378 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+
+/* ===============================
+   HIDE VERTICAL SCROLLBAR (UI ONLY)
+   Scroll still works
+================================ */
+
+
+body {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;    
+  background-color: #000; /* IE / Edge legacy */
+}
+
+body::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari */
+}
+
+@custom-variant dark (&:is(.dark *));
+
+.gradient-button {
+    background: linear-gradient(360deg, #1B1B20 0%, #1B1B20 50%, #222229 100%);
+    color: #989899;
+    text-shadow: 0px 0.52px 1.05px 0px rgba(0, 0, 0, 0.12), 0px 1px 2px 0px rgba(0, 0, 0, 0.24), 0px 0.5px 1px 0px rgba(0, 0, 0, 0.4) inset;
+
+    box-shadow:
+        inset 0 1px 2px -1px rgba(255, 255, 255, 0.1),
+        inset 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.02),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.5);
+
+    border: 1px solid transparent;
+    border-top-color: #4B4C4D;
+    outline: 1px solid black;
+    backdrop-filter: blur(40px);
+    transition: all 120ms ease-out;
+
+}
+
+.gradient-button:hover {
+    background: linear-gradient(180deg, #16161A 0%, #1E1E24 100%);
+
+    color: white;
+    backdrop-filter: blur(40.73px);
+    transition: all 120ms ease-out;
+    border: 1px solid transparent;
+    border-top: rgba(255, 255, 255, 0.03) 0%;
+    border-bottom: rgba(255, 255, 255, 0.03) 100%;
+
+    box-shadow:
+        inset 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.02),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.08),
+        inset 0 2px 4px rgba(0, 0, 0, 0.2),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.32);
+}
+
+
+.gradient-button-light {
+    background: linear-gradient(
+        360deg,
+        #2A2A31 0%,
+        #2A2A31 50%,
+        #31313A 100%
+    );
+
+    color: #B0B0B3;
+
+    text-shadow:
+        0px 0.52px 1.05px rgba(0, 0, 0, 0.12),
+        0px 1px 2px rgba(0, 0, 0, 0.24),
+        0px 0.5px 1px rgba(0, 0, 0, 0.4) inset;
+
+    box-shadow:
+        inset 0 1px 2px -1px rgba(255, 255, 255, 0.12),
+        inset 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.03),
+        inset 0 1px 1px rgba(255, 255, 255, 0.12),
+        0 2px 4px -1px rgba(0, 0, 0, 0.5);
+
+    border: 1px solid transparent;
+    border-top-color: #6A6B6E;
+
+    outline: 1px solid black;
+
+    backdrop-filter: blur(40px);
+    transition: all 120ms ease-out;
+}
+
+
+.gradient-button-light:hover {
+    background: linear-gradient(
+        180deg,
+        #26262D 0%,
+        #2E2E36 100%
+    );
+
+    color: #E5E5E7;
+
+    backdrop-filter: blur(40.73px);
+    transition: all 120ms ease-out;
+
+    border: 1px solid transparent;
+    border-top: rgba(255, 255, 255, 0.06) 0%;
+    border-bottom: rgba(255, 255, 255, 0.06) 100%;
+
+    box-shadow:
+        inset 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.02),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.10),
+        inset 0 2px 4px rgba(0, 0, 0, 0.22),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.34);
+}
+.grad-blue {
+    background: linear-gradient(
+        360deg,
+        #1F57D6 0%,     /* darker than blue-600 */
+        #1F57D6 55%,
+        #2F6FED 100%    /* restrained highlight */
+    );
+
+    color: #EAF1FF;
+
+    text-shadow:
+        0px 0.5px 1px rgba(0, 35, 110, 0.25),
+        0px 1px 2px rgba(0, 30, 90, 0.35),
+        0px 0.5px 1px rgba(0, 0, 0, 0.38) inset;
+
+    box-shadow:
+        inset 0 1px 2px -1px rgba(190, 215, 255, 0.25),
+        inset 0 0 1px rgba(0, 0, 0, 0.08),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.06),
+        inset 0 1px 1px rgba(190, 215, 255, 0.18),
+        0 2px 4px -1px rgba(20, 60, 150, 0.60);
+
+    border: 1px solid transparent;
+    border-top-color: #7CA6FF;
+
+    outline: 1px solid #0B1C3D;
+
+    backdrop-filter: blur(40px);
+    transition: all 120ms ease-out;
+}
+
+.grad-blue:hover {
+background: linear-gradient(
+    360deg,
+    #2563EB 0%,   /* blue-600 */
+    #2563EB 50%,
+    #3B82F6 100%  /* blue-500 */
+);
+    color: #FFFFFF;
+
+    border-top-color: rgba(200, 220, 255, 0.24);
+    border-bottom-color: rgba(200, 220, 255, 0.16);
+
+    box-shadow:
+        inset 0 0 1px rgba(0, 0, 0, 0.06),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.06),
+        inset 0 -1px 2px rgba(180, 210, 255, 0.28),
+        inset 0 2px 4px rgba(0, 40, 120, 0.35),
+        inset 0 -1px 2px rgba(0, 30, 90, 0.45);
+}
+
+.grad-navy {
+    background: linear-gradient(
+        360deg,
+        #0F1B2E 0%,
+        #122038 50%,
+        #162A4A 100%
+    );
+
+    color: #B7C9E6;
+
+    text-shadow:
+        0px 0.52px 1.05px rgba(0, 20, 60, 0.25),
+        0px 1px 2px rgba(0, 30, 90, 0.35),
+        0px 0.5px 1px rgba(0, 0, 0, 0.4) inset;
+
+    box-shadow:
+        inset 0 1px 2px -1px rgba(180, 210, 255, 0.18),
+        inset 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.05),
+        inset 0 1px 1px rgba(160, 200, 255, 0.15),
+        0 2px 4px -1px rgba(0, 20, 60, 0.6);
+
+    border: 1px solid transparent;
+    border-top-color: #3E5F9A;
+
+    outline: 1px solid #060D1A;
+
+    backdrop-filter: blur(40px);
+    transition: all 120ms ease-out;
+}
+
+.grad-navy:hover {
+    background: linear-gradient(
+        180deg,
+        #0B1A33 0%,
+        #143A66 100%
+    );
+
+    color: #E4EDFF;
+
+    backdrop-filter: blur(40.73px);
+
+    border: 1px solid transparent;
+    border-top-color: rgba(180, 210, 255, 0.18);
+    border-bottom-color: rgba(180, 210, 255, 0.12);
+
+    box-shadow:
+        inset 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 -1px 0.5px rgba(0, 0, 0, 0.03),
+        inset 0 -1px 2px rgba(170, 210, 255, 0.18),
+        inset 0 2px 4px rgba(0, 20, 60, 0.35),
+        inset 0 -1px 2px rgba(0, 10, 40, 0.45);
+}
+
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+    --radius-3xl: calc(var(--radius) + 12px);
+    --radius-4xl: calc(var(--radius) + 16px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+}
+
+:root {
+    --radius: 0.625rem;
+    --black: #000;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+
+    }
+  body {
+    @apply bg-background text-foreground;
+
+    }
+
+}
+
+@theme inline {
+  --animate-cell-ripple: cell-ripple var(--duration, 200ms) ease-out none 1
+  var(--delay, 0ms);
+
+  @keyframes cell-ripple {
+    0% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 0.4;
+    }
+  }
+}
+
+
+#webgl {
+  top: 0;
+  left: 0;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}
+
+#webgl canvas {
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,27 @@
+name: ci_pipeline
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs: 
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name : Checkout code
+        uses : actions/checkout@v4 
+
+      - name : Steup Node.js 
+        uses : actions/setup-node@v4
+        with : 
+          node-version: 20
+
+      - name : Install pnpm
+        run : npm i -g pnpm
+      
+      - name : Install dependancies
+        run : pnpm install --frozen-lockfile
+
+      - name : Run build
+        run : pnpm run build 
