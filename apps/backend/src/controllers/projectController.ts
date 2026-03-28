@@ -4,6 +4,9 @@ import { runUserRequest, runProjectStream } from "../agent.js";
 import { assembleProject } from "../projectAssembler.js";
 import { BASE_TEMPLATE } from "../baseTemplate.js";
 import { createSandbox, isSandboxAlive, resurrectSandbox } from "../sandbox.js";
+import { decrypt } from "../crypto.js";
+import { OPENROUTER_API_KEY } from "../config.js";
+import { resolveOpenRouterModel } from "../models.js";
 
 export async function createProject(req: Request, res: Response) {
   const { prompt } = req.body;
@@ -114,7 +117,7 @@ export async function createProject(req: Request, res: Response) {
 
 /** SSE stream: same as create but streams LangGraph log events then sends project result. No extra tool calls. */
 export async function createProjectStream(req: Request, res: Response) {
-  const { prompt } = req.body;
+  const { prompt, model } = req.body;
 
   if (!prompt || typeof prompt !== "string") {
     return res.status(400).json({ success: false, message: "Prompt not found" });
@@ -128,29 +131,81 @@ export async function createProjectStream(req: Request, res: Response) {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
   const send = (event: object) => res.write(`data: ${JSON.stringify(event)}\n\n`);
-  console.log("prompt received");
+  const clientModelKey =
+    typeof model === "string" && model.trim() ? model.trim() : undefined;
+  const openRouterModel = resolveOpenRouterModel(clientModelKey);
+  console.log(
+    "prompt received, client model key:",
+    clientModelKey ?? "(default)",
+    "→ OpenRouter:",
+    openRouterModel
+  );
   send({ type: "log", message: "prompt received" });
+
+  // Resolve API key: prefer user-stored key, fall back to env var
+  let resolvedApiKey: string | undefined;
+  let usingFallbackKey = false;
+  try {
+    const userRecord = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { openrouterApiKey: true },
+    });
+    if (userRecord?.openrouterApiKey) {
+      resolvedApiKey = decrypt(userRecord.openrouterApiKey);
+    } else if (OPENROUTER_API_KEY) {
+      resolvedApiKey = OPENROUTER_API_KEY;
+      usingFallbackKey = true;
+    } else {
+      send({ type: "error", message: "No OpenRouter API key configured. Please add your key in Settings." });
+      return res.end();
+    }
+  } catch (err) {
+    console.error("Failed to resolve API key:", err);
+    send({ type: "error", message: "Failed to load API key. Please re-save your key in Settings." });
+    return res.end();
+  }
+
+  // Rate limit: users without their own API key can only create 3 projects
+  const FREE_PROJECT_LIMIT = 3;
+  if (usingFallbackKey) {
+    const projectCount = await prisma.project.count({ where: { userId } });
+    if (projectCount >= FREE_PROJECT_LIMIT) {
+      send({
+        type: "error",
+        message: `You've used all ${FREE_PROJECT_LIMIT} free projects. Add your own OpenRouter API key in Settings to continue.`,
+      });
+      return res.end();
+    }
+  }
+
+  // Heartbeat: send a SSE comment every 15s to keep the connection alive
+  // while the LLM is generating (slow models like Gemini can take 2-5 min silently)
+  const heartbeat = setInterval(() => {
+    res.write(": ping\n\n");
+  }, 15_000);
 
   try {
     const result = await runProjectStream(prompt, (event) => {
       if (event.type === "log" && event.message) {
         send({ type: "log", message: event.message });
-      } else if (event.type === "result" && event.result) {
-        send({ type: "result", result: event.result });
       }
-    });
+      // Note: "result" events are intentionally not forwarded — they contain large
+      // file payloads that can fragment the SSE stream buffer. The frontend only
+      // needs "log", "project", and "error" events.
+    }, openRouterModel, resolvedApiKey);
 
     if (!result.success) {
       send({ type: "error", message: result.error ?? "AI generation failed" });
-      return res.end();
+      return;
     }
 
     if (!Array.isArray(result.files) || result.files.length === 0) {
       send({ type: "error", message: "AI did not generate any files" });
-      return res.end();
+      return;
     }
 
     const projectFiles = await assembleProject(result.files);
@@ -181,7 +236,7 @@ export async function createProjectStream(req: Request, res: Response) {
     } catch (err) {
       await prisma.project.update({ where: { id: project.id }, data: { staus: "failed" } });
       send({ type: "error", message: "Sandbox creation failed" });
-      return res.end();
+      return;
     }
 
     await prisma.project.update({
@@ -194,8 +249,10 @@ export async function createProjectStream(req: Request, res: Response) {
     console.error("Create project stream failed:", err);
     send({ type: "error", message: "Server error" });
   } finally {
+    clearInterval(heartbeat);
     res.end();
   }
+
 }
 
 

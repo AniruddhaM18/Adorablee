@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
-import { prisma, Prisma } from "@repo/database";
+import { prisma } from "@repo/database";
 import { runEditAgentStream, runErrorFixStream } from "../editAgent.js";
 import { updateSandboxFiles, updateSandboxFilesTemporary, validateSandboxBuild } from "../sandbox.js";
 import { FileChange } from "../modifyTools.js";
+import { decrypt } from "../crypto.js";
+import { OPENROUTER_API_KEY } from "../config.js";
+import { resolveOpenRouterModel } from "../models.js";
 
 // Constants for error recovery
 const MAX_FIX_ATTEMPTS = 3;
@@ -128,6 +131,36 @@ export async function editProjectChat(req: Request, res: Response) {
     // Flatten current files for the prompt
     const currentFiles = flattenFiles(currentVersion.files);
 
+    const clientModelKey =
+        typeof req.query.model === "string" && req.query.model.trim()
+            ? req.query.model.trim()
+            : undefined;
+    const openRouterModel = resolveOpenRouterModel(clientModelKey);
+
+    let resolvedApiKey: string | undefined;
+    try {
+        const userRecord = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { openrouterApiKey: true },
+        });
+        if (userRecord?.openrouterApiKey) {
+            resolvedApiKey = decrypt(userRecord.openrouterApiKey);
+        } else if (OPENROUTER_API_KEY) {
+            resolvedApiKey = OPENROUTER_API_KEY;
+        }
+    } catch (err) {
+        console.error("Failed to resolve API key for edit:", err);
+        return res.status(500).json({
+            error: "Failed to load API key. Please re-save your key in Settings.",
+        });
+    }
+
+    if (!resolvedApiKey) {
+        return res.status(400).json({
+            error: "No OpenRouter API key configured. Please add your key in Settings.",
+        });
+    }
+
     // SSE headers
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -147,7 +180,9 @@ export async function editProjectChat(req: Request, res: Response) {
             chatHistory,
             (event) => {
                 res.write(`data: ${JSON.stringify(event)}\n\n`);
-            }
+            },
+            openRouterModel,
+            resolvedApiKey
         );
 
         console.log(`Edit agent returned ${fileChanges.length} file changes:`, fileChanges.map(f => f.path));
@@ -202,7 +237,9 @@ export async function editProjectChat(req: Request, res: Response) {
                                     validation.errors || "Build failed with unknown errors",
                                     (event) => {
                                         res.write(`data: ${JSON.stringify(event)}\n\n`);
-                                    }
+                                    },
+                                    openRouterModel,
+                                    resolvedApiKey
                                 );
 
                                 if (fixChanges.length > 0) {
