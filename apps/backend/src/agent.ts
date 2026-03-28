@@ -6,12 +6,11 @@ import { StateGraph, MessagesAnnotation, END } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { AIMessage, ToolMessage } from "@langchain/core/messages";
 import { OPENROUTER_API_KEY } from "./config.js";
+import { DEFAULT_OPENROUTER_MODEL } from "./models.js";
 import { getSystemPrompt } from "./prompt.js";
 import { webSearchTool } from "./webSearch.js";
 
 //Heart of adorable......!
-
-
 type GeneratedFile = {
   path: string;
   content: string;
@@ -81,63 +80,50 @@ const createTool = tool(
 );
 
 
-const llm = new ChatOpenAI({
-  model: "anthropic/claude-sonnet-4.5",
-  apiKey: OPENROUTER_API_KEY,
-  temperature: 0,
-  configuration: {
-    baseURL: "https://openrouter.ai/api/v1",
-    defaultHeaders: {
-      "HTTP-Referer": "http://localhost:3000",
-      "X-Title": "Adorable",
+// Factory: builds a fresh compiled LangGraph for a given model.
+// Used by runProjectStream so each request can use a user-chosen model.
+function buildGraph(model: string, apiKey?: string) {
+  const resolvedKey = apiKey ?? OPENROUTER_API_KEY;
+  if (!resolvedKey) throw new Error("No OpenRouter API key available. Please add your key in Settings.");
+  const llm = new ChatOpenAI({
+    model,
+    apiKey: resolvedKey,
+    temperature: 0,
+    configuration: {
+      baseURL: "https://openrouter.ai/api/v1",
+      defaultHeaders: {
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Adorable",
+      },
     },
-  },
-});
+  });
 
-const llmWithTools = llm.bindTools([
-  createTool,
-  webSearchTool,
-]);
+  const llmWithTools = llm.bindTools([createTool, webSearchTool]);
 
-//langraph
-async function agentNode(state: typeof MessagesAnnotation.State) {
-  const response = await llmWithTools.invoke(state.messages);
-  return { messages: [response] };
-}
-
-
-// Decide whether to execute tools or stop!!!!
-/// ToolNode will decide WHICH tool to run
-
-function shouldContinue(state: typeof MessagesAnnotation.State) {
-  const last = state.messages[state.messages.length - 1] as AIMessage;
-
-  if (!last.tool_calls || last.tool_calls.length === 0) {
-    return "__end__";
+  async function agentNode(state: typeof MessagesAnnotation.State) {
+    const response = await llmWithTools.invoke(state.messages);
+    return { messages: [response] };
   }
 
-  return "tools";
+  function shouldContinue(state: typeof MessagesAnnotation.State) {
+    const last = state.messages[state.messages.length - 1] as AIMessage;
+    if (!last.tool_calls || last.tool_calls.length === 0) return "__end__";
+    return "tools";
+  }
+
+  const toolNode = new ToolNode([createTool, webSearchTool]);
+
+  const workflow = new StateGraph(MessagesAnnotation)
+    .addNode("agent", agentNode)
+    .addNode("tools", toolNode)
+    .addEdge("__start__", "agent")
+    .addConditionalEdges("agent", shouldContinue, { tools: "tools", __end__: END })
+    .addEdge("tools", "agent");
+
+  return workflow.compile();
 }
 
-//imp ToolNode must know about all tools
-const toolNode = new ToolNode([
-  createTool,
-  webSearchTool,
-]);
-
-const workflow = new StateGraph(MessagesAnnotation)
-  .addNode("agent", agentNode)
-  .addNode("tools", toolNode)
-  .addEdge("__start__", "agent")
-  .addConditionalEdges("agent", shouldContinue, {
-    tools: "tools",
-    __end__: END,
-  })
-  // After running tools (e.g. web_search, create_app), go back to the agent
-  // so it can decide whether to call another tool or finish.
-  .addEdge("tools", "agent");
-
-export const appGraph = workflow.compile();
+export const appGraph = buildGraph(DEFAULT_OPENROUTER_MODEL);
 
 // Build AgentResult from final graph messages (shared
 
@@ -286,7 +272,9 @@ export async function runAgentStream(
 
 export async function runProjectStream(
   userInput: string,
-  onEvent: (event: { type: string; message?: string; result?: AgentResult }) => void
+  onEvent: (event: { type: string; message?: string; result?: AgentResult }) => void,
+  model: string,
+  apiKey?: string
 ): Promise<AgentResult> {
   const systemPrompt = getSystemPrompt();
   const initialMessages = [
@@ -294,9 +282,11 @@ export async function runProjectStream(
     { role: "user" as const, content: userInput },
   ];
 
+  const graph = buildGraph(model, apiKey);
+  console.log(`[runProjectStream] Using model: ${model}`);
   onEvent({ type: "log", message: "Starting LangGraph..." });
 
-  const stream = await appGraph.stream(
+  const stream = await graph.stream(
     { messages: initialMessages },
     { recursionLimit: 50 }
   );

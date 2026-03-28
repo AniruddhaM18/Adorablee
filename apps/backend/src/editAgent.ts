@@ -5,12 +5,11 @@ import { StateGraph, MessagesAnnotation, END } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { AIMessage, ToolMessage } from "@langchain/core/messages";
 import { OPENROUTER_API_KEY } from "./config.js";
+import { DEFAULT_OPENROUTER_MODEL } from "./models.js";
 import { getEditSystemPrompt, getErrorFixPrompt } from "./prompt.js";
 import { modifyTool, FileChange } from "./modifyTools.js";
 import { chatTool } from "./chatTools.js";
 import { webSearchTool } from "./webSearch.js";
-
-
 
 type EditAgentResult =
     | {
@@ -23,28 +22,7 @@ type EditAgentResult =
         error: string;
     };
 
-
-const llm = new ChatOpenAI({
-    model: "openai/o4-mini",
-    apiKey: OPENROUTER_API_KEY,
-    temperature: 0,
-    configuration: {
-        baseURL: "https://openrouter.ai/api/v1",
-        defaultHeaders: {
-            "HTTP-Referer": "http://localhost:3000",
-            "X-Title": "Adorable",
-        },
-    },
-});
-
-// Bind edit-specific tools (including web search for current info)
-const editLlmWithTools = llm.bindTools([modifyTool, chatTool, webSearchTool]);
-
-// LangGraph for edit agent
-async function editAgentNode(state: typeof MessagesAnnotation.State) {
-    const response = await editLlmWithTools.invoke(state.messages);
-    return { messages: [response] };
-}
+const editToolNode = new ToolNode([modifyTool, chatTool, webSearchTool]);
 
 function shouldContinue(state: typeof MessagesAnnotation.State) {
     const last = state.messages[state.messages.length - 1] as AIMessage;
@@ -56,22 +34,42 @@ function shouldContinue(state: typeof MessagesAnnotation.State) {
     return "tools";
 }
 
-const editToolNode = new ToolNode([modifyTool, chatTool, webSearchTool]);
+export function buildEditGraph(model: string, apiKey: string) {
+    if (!apiKey) {
+        throw new Error("No OpenRouter API key available. Please add your key in Settings.");
+    }
+    const llm = new ChatOpenAI({
+        model,
+        apiKey,
+        temperature: 0,
+        configuration: {
+            baseURL: "https://openrouter.ai/api/v1",
+            defaultHeaders: {
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "Adorable",
+            },
+        },
+    });
 
-const editWorkflow = new StateGraph(MessagesAnnotation)
-    .addNode("agent", editAgentNode)
-    .addNode("tools", editToolNode)
-    .addEdge("__start__", "agent")
-    .addConditionalEdges("agent", shouldContinue, {
-        tools: "tools",
-        __end__: END,
-    })
-    // After tools (modify_app, web_search, etc.), return to the agent
-    // so it can decide whether to call another tool or finish.
-    .addEdge("tools", "agent");
+    const editLlmWithTools = llm.bindTools([modifyTool, chatTool, webSearchTool]);
 
-export const editGraph = editWorkflow.compile();
+    async function editAgentNode(state: typeof MessagesAnnotation.State) {
+        const response = await editLlmWithTools.invoke(state.messages);
+        return { messages: [response] };
+    }
 
+    const editWorkflow = new StateGraph(MessagesAnnotation)
+        .addNode("agent", editAgentNode)
+        .addNode("tools", editToolNode)
+        .addEdge("__start__", "agent")
+        .addConditionalEdges("agent", shouldContinue, {
+            tools: "tools",
+            __end__: END,
+        })
+        .addEdge("tools", "agent");
+
+    return editWorkflow.compile();
+}
 
 function safeJsonParse(value: string) {
     try {
@@ -81,15 +79,16 @@ function safeJsonParse(value: string) {
     }
 }
 
-///Streaming edit execution
-
 export async function runEditAgentStream(
     currentFiles: Record<string, string>,
     userMessage: string,
     chatHistory: { role: string; content: string }[],
-    onEvent: (event: any) => void
+    onEvent: (event: any) => void,
+    openRouterModel: string,
+    apiKey: string
 ) {
     console.log("runEditAgentStream: Starting...");
+    const editGraph = buildEditGraph(openRouterModel, apiKey);
     const systemPrompt = getEditSystemPrompt(currentFiles);
 
     const messages = [
@@ -124,7 +123,6 @@ export async function runEditAgentStream(
                             : last.content;
 
                     if (content && typeof content === "object") {
-                        // Handle modify_app tool results
                         if (Array.isArray((content as any).files)) {
                             console.log(`runEditAgentStream: Found ${(content as any).files.length} files in tool result`);
                             for (const file of (content as any).files) {
@@ -138,7 +136,6 @@ export async function runEditAgentStream(
                             }
                         }
 
-                        // Handle chat_message tool results
                         if ((content as any).type === "chat" && (content as any).message) {
                             onEvent({
                                 type: "token",
@@ -173,12 +170,18 @@ export async function runEditAgentStream(
     }
 }
 
-/// One-shot edit execution (for non-streaming use cases)
-
 export async function runEditRequest(
     currentFiles: Record<string, string>,
     userMessage: string
 ): Promise<EditAgentResult> {
+    const key = OPENROUTER_API_KEY;
+    if (!key) {
+        return {
+            success: false,
+            error: "No OpenRouter API key configured.",
+        };
+    }
+    const editGraph = buildEditGraph(DEFAULT_OPENROUTER_MODEL, key);
     const systemPrompt = getEditSystemPrompt(currentFiles);
 
     const inputs = {
@@ -230,14 +233,15 @@ export async function runEditRequest(
     };
 }
 
-/// Error fix streaming execution - used when build validation fails
-
 export async function runErrorFixStream(
     currentFiles: Record<string, string>,
     buildErrors: string,
-    onEvent: (event: any) => void
+    onEvent: (event: any) => void,
+    openRouterModel: string,
+    apiKey: string
 ): Promise<FileChange[]> {
     console.log("runErrorFixStream: Starting error fix...");
+    const editGraph = buildEditGraph(openRouterModel, apiKey);
     const systemPrompt = getErrorFixPrompt(currentFiles, buildErrors);
 
     const messages = [
