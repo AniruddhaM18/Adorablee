@@ -299,34 +299,102 @@ export async function runProjectStream(
     ),
   ];
 
-  for await (const chunk of stream) {
-    for (const [nodeName, state] of Object.entries(chunk)) {
-      const s = state as { messages?: typeof MessagesAnnotation.State["messages"] };
-      if (s.messages?.length) {
-        const newMessages = Array.isArray(s.messages) ? s.messages : [s.messages];
-        messages.push(...newMessages);
+  // Wrap stream loop in try/catch so GraphRecursionError and LLM API failures
+  // don't propagate — messages accumulated so far feed into the forced retry below.
+  try {
+    for await (const chunk of stream) {
+      for (const [nodeName, state] of Object.entries(chunk)) {
+        const s = state as { messages?: typeof MessagesAnnotation.State["messages"] };
+        if (s.messages?.length) {
+          const newMessages = Array.isArray(s.messages) ? s.messages : [s.messages];
+          messages.push(...newMessages);
 
-        if (nodeName === "agent") {
-          onEvent({ type: "log", message: "LLM thinking..." });
-        } else if (nodeName === "tools") {
-          const lastAi = [...messages].reverse().find((m) => m instanceof AIMessage) as AIMessage | undefined;
-          const toolName = lastAi?.tool_calls?.[0]?.name ?? "tool";
-          onEvent({ type: "log", message: `Tool Invoked: ${toolName}` });
-          // When create_app returns, emit file count from tool result
-          const lastMsg = newMessages[newMessages.length - 1];
-          if (lastMsg instanceof ToolMessage && toolName === "create_app") {
-            const content = typeof lastMsg.content === "string" ? safeJsonParse(lastMsg.content) : lastMsg.content;
-            const files = content && typeof content === "object" && Array.isArray((content as any).files) ? (content as any).files : [];
-            if (files.length > 0) {
-              onEvent({ type: "log", message: `Generated ${files.length} files` });
+          if (nodeName === "agent") {
+            onEvent({ type: "log", message: "LLM thinking..." });
+          } else if (nodeName === "tools") {
+            const lastAi = [...messages].reverse().find((m) => m instanceof AIMessage) as AIMessage | undefined;
+            const toolName = lastAi?.tool_calls?.[0]?.name ?? "tool";
+            onEvent({ type: "log", message: `Tool Invoked: ${toolName}` });
+            // When create_app returns, emit file count from tool result
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg instanceof ToolMessage && toolName === "create_app") {
+              const content = typeof lastMsg.content === "string" ? safeJsonParse(lastMsg.content) : lastMsg.content;
+              const files = content && typeof content === "object" && Array.isArray((content as any).files) ? (content as any).files : [];
+              if (files.length > 0) {
+                onEvent({ type: "log", message: `Generated ${files.length} files` });
+              }
             }
           }
         }
       }
     }
+  } catch (streamError) {
+    // GraphRecursionError, LLM API timeout, context-too-large, etc.
+    // Don't rethrow — fall through to forced retry if we have web search context.
+    console.error("[runProjectStream] Stream error:", streamError instanceof Error ? streamError.message : String(streamError));
   }
 
-  const result = messagesToResult(messages);
+  let result = messagesToResult(messages);
+
+  // Forced retry (model-agnostic): if the stream ended without generating files
+  // but did gather web search context, force create_app with tool_choice: "required".
+  // This covers two failure modes for ALL models:
+  //   1. LLM responded with text instead of calling create_app
+  //   2. LLM kept looping on web_search until recursion limit was hit
+  // OpenRouter normalises tool_choice: "required" to each model's native format.
+  const hasToolContext = messages.some((m) => m instanceof ToolMessage);
+  if (!result.success && hasToolContext) {
+    onEvent({ type: "log", message: "Generating code from research..." });
+    try {
+      const resolvedKey = apiKey ?? OPENROUTER_API_KEY;
+      if (resolvedKey) {
+        const forcedLlm = new ChatOpenAI({
+          model,
+          apiKey: resolvedKey,
+          temperature: 0,
+          configuration: {
+            baseURL: "https://openrouter.ai/api/v1",
+            defaultHeaders: {
+              "HTTP-Referer": "http://localhost:3000",
+              "X-Title": "Adorable",
+            },
+          },
+        }).bindTools([createTool], { tool_choice: "required" });
+
+        const forcedAiMsg = await forcedLlm.invoke([
+          ...messages,
+          {
+            role: "user" as const,
+            content:
+              "You have all the research above. Generate the complete website now by calling create_app with every file.",
+          },
+        ]);
+
+        if (forcedAiMsg.tool_calls?.length) {
+          onEvent({ type: "log", message: "Tool Invoked: create_app" });
+          // Pass the full ToolCall object so LangChain resolves name + args correctly.
+          const toolResult = await createTool.invoke(forcedAiMsg.tool_calls[0]);
+          const toolContent = typeof toolResult === "string" ? toolResult : JSON.stringify(toolResult);
+          const toolFiles = (toolResult as any)?.files ?? [];
+          if (toolFiles.length > 0) {
+            onEvent({ type: "log", message: `Generated ${toolFiles.length} files` });
+          }
+          messages.push(
+            forcedAiMsg,
+            new ToolMessage({
+              content: toolContent,
+              tool_call_id: forcedAiMsg.tool_calls[0].id ?? "",
+              name: "create_app",
+            })
+          );
+          result = messagesToResult(messages);
+        }
+      }
+    } catch (retryError) {
+      console.error("[runProjectStream] Forced retry error:", retryError instanceof Error ? retryError.message : String(retryError));
+    }
+  }
+
   onEvent({ type: "result", result });
   return result;
 }
