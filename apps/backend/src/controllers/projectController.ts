@@ -128,13 +128,24 @@ export async function createProjectStream(req: Request, res: Response) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
+  // Disable socket timeout so long LLM calls (3–5 min on large contexts) aren't killed.
+  req.socket.setTimeout(0);
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
-  const send = (event: object) => res.write(`data: ${JSON.stringify(event)}\n\n`);
+  // Safe send: swallows write errors so a broken socket never causes an unhandled
+  // exception that silently drops the event the client was waiting for.
+  const send = (event: object) => {
+    try {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    } catch {
+      // Socket already closed — nothing to do.
+    }
+  };
   const clientModelKey =
     typeof model === "string" && model.trim() ? model.trim() : undefined;
   const openRouterModel = resolveOpenRouterModel(clientModelKey);
@@ -199,7 +210,7 @@ export async function createProjectStream(req: Request, res: Response) {
     }, openRouterModel, resolvedApiKey);
 
     if (!result.success) {
-      send({ type: "error", message: result.error ?? "AI generation failed" });
+      send({ type: "error", message: result.error || "AI generation failed" });
       return;
     }
 

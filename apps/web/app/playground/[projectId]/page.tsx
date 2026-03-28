@@ -74,8 +74,8 @@ function PlaygroundContent() {
         router.replace(`/playground/${event.projectId}${suffix}`);
         return true;
       }
-      if (event.type === "error" && event.message) {
-        setError(event.message);
+      if (event.type === "error") {
+        setError(event.message || "Something went wrong, please try again.");
         setIsCreating(false);
         return true;
       }
