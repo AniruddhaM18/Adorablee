@@ -1,8 +1,7 @@
 # Adorablee
 
-This is the V1 of my original product named adorable(v0)
+This is the V1 of my original product named adorable(v0)<br>
 AI-powered app builder: describe your idea in natural language, get a full-stack app generated and run in a sandbox, then deploy to the web.
-
 ## Features
 
 - **Natural language to app** — Describe what you want; a LangGraph-based agent generates the project (files and structure).
