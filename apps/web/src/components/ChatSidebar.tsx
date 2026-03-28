@@ -15,10 +15,12 @@ type Message = {
 
 type ChatSidebarProps = {
   projectId?: string;
+  /** Backend model key (e.g. gemini-3.1-pro); optional — server defaults if omitted */
+  modelKey?: string;
   onFilesUpdate?: (files: any) => void;
 };
 
-export function ChatSidebar({ projectId, onFilesUpdate }: ChatSidebarProps) {
+export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +69,10 @@ export function ChatSidebar({ projectId, onFilesUpdate }: ChatSidebarProps) {
       })
     );
 
-    const url = `${endpoint}?payload=${payloadParam}`;
+    let url = `${endpoint}?payload=${payloadParam}`;
+    if (projectId && projectId !== "creating" && modelKey?.trim()) {
+      url += `&model=${encodeURIComponent(modelKey.trim())}`;
+    }
 
     try {
       // Use fetch with credentials to send cookies cross-origin

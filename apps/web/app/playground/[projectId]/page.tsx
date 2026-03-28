@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { ChatSidebar } from "@/src/components/ChatSidebar";
 import { ViewSelector } from "@/src/components/ViewSelector";
 import { NEXT_PUBLIC_BACKEND_URL } from "@/config";
@@ -25,28 +25,72 @@ function PlaygroundContent() {
   const [isCreating, setIsCreating] = useState(isCreatingMode);
   const [error, setError] = useState<string | null>(null);
   const [createLogLines, setCreateLogLines] = useState<string[]>([]);
-  const createProjectStartedRef = useRef(false);
 
-  // Create project via SSE stream when in creating mode (only once)
+  // Create project via SSE stream when in creating mode
   useEffect(() => {
     if (!isCreatingMode) return;
-    if (createProjectStartedRef.current) return;
-    createProjectStartedRef.current = true;
 
     const prompt = searchParams.get("prompt");
+    const model = searchParams.get("model") ?? undefined;
     if (!prompt) {
-      createProjectStartedRef.current = false;
       router.push("/");
       return;
     }
 
+    const abortController = new AbortController();
+    const { signal } = abortController;
+
+    const parseSseDataPayload = (rawLine: string) => {
+      const line = rawLine.replace(/\r$/, "").trimEnd();
+      if (!line.startsWith("data: ")) return null;
+      const json = line.slice(6).trim();
+      try {
+        return JSON.parse(json) as {
+          type?: string;
+          message?: string;
+          projectId?: string;
+        };
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[create-stream] SSE data line JSON parse failed", e);
+        }
+        return null;
+      }
+    };
+
+    /** Returns true if the caller should stop (navigated, error shown, or terminal event). */
+    const handleSseEvent = (event: NonNullable<ReturnType<typeof parseSseDataPayload>>) => {
+      if (event.type === "log" && event.message != null && event.message !== "") {
+        const logLine = event.message;
+        setCreateLogLines((prev) => [...prev, logLine]);
+        return false;
+      }
+      if (event.type === "project" && event.projectId) {
+        const modelParam = searchParams.get("model");
+        const suffix =
+          modelParam != null && modelParam !== ""
+            ? `?model=${encodeURIComponent(modelParam)}`
+            : "";
+        router.replace(`/playground/${event.projectId}${suffix}`);
+        return true;
+      }
+      if (event.type === "error" && event.message) {
+        setError(event.message);
+        setIsCreating(false);
+        return true;
+      }
+      return false;
+    };
+
     const createProject = async () => {
+      let streamDone = false;
       try {
         const res = await fetch(`${NEXT_PUBLIC_BACKEND_URL}/project/create-stream`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, model }),
+          signal,
         });
 
         if (res.status === 401) {
@@ -64,33 +108,41 @@ function PlaygroundContent() {
         const decoder = new TextDecoder();
         let buffer = "";
 
-        while (true) {
+        const flushLine = (line: string) => {
+          const event = parseSseDataPayload(line);
+          return event ? handleSseEvent(event) : false;
+        };
+
+        while (!signal.aborted) {
           const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
+          if (value) {
+            buffer += decoder.decode(value, { stream: !done });
+          }
+          if (done) {
+            streamDone = true;
+            for (const line of buffer.split("\n")) {
+              if (flushLine(line)) return;
+            }
+            break;
+          }
           const lines = buffer.split("\n");
           buffer = lines.pop() ?? "";
           for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const event = JSON.parse(line.slice(6));
-                if (event.type === "log" && event.message) {
-                  setCreateLogLines((prev) => [...prev, event.message]);
-                } else if (event.type === "project" && event.projectId) {
-                  router.replace(`/playground/${event.projectId}`);
-                  return;
-                } else if (event.type === "error" && event.message) {
-                  setError(event.message);
-                  setIsCreating(false);
-                  return;
-                }
-              } catch (_) {}
-            }
+            if (flushLine(line)) return;
           }
         }
-        setError("No project returned");
-        setIsCreating(false);
+
+        if (!signal.aborted && streamDone) {
+          setError("No project returned");
+          setIsCreating(false);
+        }
       } catch (err) {
+        if (signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+          return;
+        }
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         console.error("Create error:", err);
         setError("Network error");
         setIsCreating(false);
@@ -98,6 +150,7 @@ function PlaygroundContent() {
     };
 
     createProject();
+    return () => abortController.abort();
   }, [isCreatingMode, searchParams, router]);
 
   // Fetch project data only when we have a real projectId
@@ -147,10 +200,13 @@ function PlaygroundContent() {
     );
   }
 
+  const chatModelKey = searchParams.get("model") ?? undefined;
+
   return (
     <div>
       <ChatSidebar
         projectId={actualProjectId || "creating"}
+        modelKey={chatModelKey}
         onFilesUpdate={handleFilesUpdate}
       />
       <ViewSelector

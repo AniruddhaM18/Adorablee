@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import LogoIcon from "@/components/ui/logo";
 import { useAuth } from "@/context/AuthContext";
+import { FiSettings, FiLogOut } from "react-icons/fi";
 
 export function Navbar() {
   const [hidden, setHidden] = useState(false);
@@ -67,13 +68,24 @@ export function Navbar() {
               // Loading state - show nothing or skeleton
               <div className="w-24 h-10 bg-neutral-800/50 rounded-xl animate-pulse" />
             ) : isLoggedIn ? (
-              // Logged in - show logout
-              <button
-                onClick={handleLogout}
-                className="bg-neutral-700/70 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-neutral-600/60 transition-colors ring-2 ring-inset ring-neutral-600/80 backdrop-blur-md"
-              >
-                Logout
-              </button>
+              // Logged in - settings first, logout second
+              <>
+                <Link href="/settings">
+                  <button
+                    title="Settings"
+                    className="text-neutral-400 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all duration-150"
+                  >
+                    <FiSettings size={18} />
+                  </button>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  title="Logout"
+                  className="text-neutral-400 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all duration-150"
+                >
+                  <FiLogOut size={18} />
+                </button>
+              </>
             ) : (
               // Not logged in - show sign in and get started
               <>

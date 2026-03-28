@@ -24,14 +24,14 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="block text-neutral-400 hover:text-neutral-300 transition"
             >
-              <FaSquareGithub className="h-12 w-auto" />
+              <FaSquareGithub className="h-10 w-auto" />
             </a>
 
             <a
               href="mailto:aniruddhamaradwar9@gmail.com"
               className="block text-neutral-400 hover:text-neutral-300 transition"
             >
-              <SiGmail className="h-12 w-auto" />
+              <SiGmail className="h-10 w-auto" />
             </a>
 
             <a
@@ -40,7 +40,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="block text-neutral-400 hover:text-neutral-300 transition"
             >
-              <FaLinkedin className="h-12 w-auto" />
+              <FaLinkedin className="h-10 w-auto" />
             </a>
 
             <a
@@ -49,7 +49,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="block text-neutral-400 hover:text-neutral-300 transition"
             >
-              <FaSquareXTwitter className="h-12 w-auto" />
+              <FaSquareXTwitter className="h-10 w-auto" />
             </a>
           </div>
         </div>
