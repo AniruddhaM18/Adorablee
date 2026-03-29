@@ -4,7 +4,6 @@ import { runEditAgentStream, runErrorFixStream } from "../editAgent.js";
 import { updateSandboxFiles, updateSandboxFilesTemporary, validateSandboxBuild } from "../sandbox.js";
 import { FileChange } from "../modifyTools.js";
 import { decrypt } from "../crypto.js";
-import { OPENROUTER_API_KEY } from "../config.js";
 import { resolveOpenRouterModel } from "../models.js";
 
 // Constants for error recovery
@@ -137,27 +136,23 @@ export async function editProjectChat(req: Request, res: Response) {
             : undefined;
     const openRouterModel = resolveOpenRouterModel(clientModelKey);
 
-    let resolvedApiKey: string | undefined;
+    let resolvedApiKey: string;
     try {
         const userRecord = await prisma.user.findUnique({
             where: { id: userId },
             select: { openrouterApiKey: true },
         });
-        if (userRecord?.openrouterApiKey) {
-            resolvedApiKey = decrypt(userRecord.openrouterApiKey);
-        } else if (OPENROUTER_API_KEY) {
-            resolvedApiKey = OPENROUTER_API_KEY;
+        if (!userRecord?.openrouterApiKey) {
+            return res.status(403).json({
+                error: "Please add your OpenRouter API key in Settings to use playground chat.",
+                code: "OPENROUTER_KEY_REQUIRED",
+            });
         }
+        resolvedApiKey = decrypt(userRecord.openrouterApiKey);
     } catch (err) {
         console.error("Failed to resolve API key for edit:", err);
         return res.status(500).json({
             error: "Failed to load API key. Please re-save your key in Settings.",
-        });
-    }
-
-    if (!resolvedApiKey) {
-        return res.status(400).json({
-            error: "No OpenRouter API key configured. Please add your key in Settings.",
         });
     }
 

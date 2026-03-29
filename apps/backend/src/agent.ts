@@ -80,15 +80,21 @@ const createTool = tool(
 );
 
 
+export type RunProjectStreamOptions = {
+  /** When set (e.g. free tier), caps completion tokens so OpenRouter reserves less balance. */
+  maxOutputTokens?: number;
+};
+
 // Factory: builds a fresh compiled LangGraph for a given model.
 // Used by runProjectStream so each request can use a user-chosen model.
-function buildGraph(model: string, apiKey?: string) {
+function buildGraph(model: string, apiKey?: string, maxOutputTokens?: number) {
   const resolvedKey = apiKey ?? OPENROUTER_API_KEY;
   if (!resolvedKey) throw new Error("No OpenRouter API key available. Please add your key in Settings.");
   const llm = new ChatOpenAI({
     model,
     apiKey: resolvedKey,
     temperature: 0,
+    ...(maxOutputTokens != null ? { maxTokens: maxOutputTokens } : {}),
     configuration: {
       baseURL: "https://openrouter.ai/api/v1",
       defaultHeaders: {
@@ -274,7 +280,8 @@ export async function runProjectStream(
   userInput: string,
   onEvent: (event: { type: string; message?: string; result?: AgentResult }) => void,
   model: string,
-  apiKey?: string
+  apiKey?: string,
+  options?: RunProjectStreamOptions
 ): Promise<AgentResult> {
   const systemPrompt = getSystemPrompt();
   const initialMessages = [
@@ -282,7 +289,8 @@ export async function runProjectStream(
     { role: "user" as const, content: userInput },
   ];
 
-  const graph = buildGraph(model, apiKey);
+  const maxOut = options?.maxOutputTokens;
+  const graph = buildGraph(model, apiKey, maxOut);
   console.log(`[runProjectStream] Using model: ${model}`);
   onEvent({ type: "log", message: "Starting LangGraph..." });
 
@@ -352,6 +360,7 @@ export async function runProjectStream(
           model,
           apiKey: resolvedKey,
           temperature: 0,
+          ...(maxOut != null ? { maxTokens: maxOut } : {}),
           configuration: {
             baseURL: "https://openrouter.ai/api/v1",
             defaultHeaders: {
