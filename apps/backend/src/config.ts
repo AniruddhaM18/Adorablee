@@ -4,6 +4,16 @@ if (!OPENROUTER_API_KEY) {
   console.warn("[config] OPENROUTER_API_KEY is not set — users must provide their own API key via Settings.");
 }
 
+/** Max completion tokens for shared-key (free tier) requests — lowers OpenRouter credit reservation vs model default. */
+const fallbackMaxParsed = parseInt(
+  process.env.OPENROUTER_FALLBACK_MAX_OUTPUT_TOKENS ?? "",
+  10
+);
+export const OPENROUTER_FALLBACK_MAX_OUTPUT_TOKENS =
+  Number.isFinite(fallbackMaxParsed) && fallbackMaxParsed > 0
+    ? fallbackMaxParsed
+    : 8192;
+
 export const E2B_API_KEY = process.env.E2B_API_KEY;
 
 export const JWT_SECRET = process.env.JWT_SECRET;

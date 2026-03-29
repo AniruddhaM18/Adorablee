@@ -36,7 +36,7 @@ function ApiKeyStatusBadge({
     }
     return (
         <Pill className="h-7 px-3 text-xs whitespace-nowrap">
-            <span className="text-gray-200 font-light">Free tier · 3 projects</span>
+            <span className="text-gray-200 font-light">Free tier · 2 projects</span>
         </Pill>
     );
 }

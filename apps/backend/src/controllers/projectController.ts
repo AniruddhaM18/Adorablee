@@ -1,12 +1,34 @@
 import { prisma, Prisma } from "@repo/database";
 import { Request, Response } from "express";
+import { APIError } from "openai";
 import { runUserRequest, runProjectStream } from "../agent.js";
 import { assembleProject } from "../projectAssembler.js";
 import { BASE_TEMPLATE } from "../baseTemplate.js";
 import { createSandbox, isSandboxAlive, resurrectSandbox } from "../sandbox.js";
 import { decrypt } from "../crypto.js";
-import { OPENROUTER_API_KEY } from "../config.js";
+import {
+  OPENROUTER_API_KEY,
+  OPENROUTER_FALLBACK_MAX_OUTPUT_TOKENS,
+} from "../config.js";
 import { resolveOpenRouterModel } from "../models.js";
+
+function isOpenRouterInsufficientCreditError(err: unknown): boolean {
+  if (err instanceof APIError && err.status === 402) return true;
+  let msg: string;
+  if (err instanceof Error) {
+    msg = err.message;
+  } else if (
+    err &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message?: unknown }).message === "string"
+  ) {
+    msg = (err as { message: string }).message;
+  } else {
+    msg = String(err);
+  }
+  return /\b402\b|credits|max_tokens|afford/i.test(msg);
+}
 
 export async function createProject(req: Request, res: Response) {
   const { prompt } = req.body;
@@ -171,22 +193,31 @@ export async function createProjectStream(req: Request, res: Response) {
       resolvedApiKey = OPENROUTER_API_KEY;
       usingFallbackKey = true;
     } else {
-      send({ type: "error", message: "No OpenRouter API key configured. Please add your key in Settings." });
+      send({
+        type: "error",
+        code: "OPENROUTER_KEY_REQUIRED",
+        message:
+          "No OpenRouter API key configured. Add your key in Settings to create projects.",
+      });
       return res.end();
     }
   } catch (err) {
     console.error("Failed to resolve API key:", err);
-    send({ type: "error", message: "Failed to load API key. Please re-save your key in Settings." });
+    send({
+      type: "error",
+      message: "Failed to load API key. Please re-save your key in Settings.",
+    });
     return res.end();
   }
 
-  // Rate limit: users without their own API key can only create 3 projects
-  const FREE_PROJECT_LIMIT = 3;
+  // Rate limit: users without their own API key can only create 2 projects
+  const FREE_PROJECT_LIMIT = 2;
   if (usingFallbackKey) {
     const projectCount = await prisma.project.count({ where: { userId } });
     if (projectCount >= FREE_PROJECT_LIMIT) {
       send({
         type: "error",
+        code: "FREE_PROJECT_LIMIT_REACHED",
         message: `You've used all ${FREE_PROJECT_LIMIT} free projects. Add your own OpenRouter API key in Settings to continue.`,
       });
       return res.end();
@@ -200,16 +231,37 @@ export async function createProjectStream(req: Request, res: Response) {
   }, 15_000);
 
   try {
-    const result = await runProjectStream(prompt, (event) => {
-      if (event.type === "log" && event.message) {
-        send({ type: "log", message: event.message });
-      }
-      // Note: "result" events are intentionally not forwarded — they contain large
-      // file payloads that can fragment the SSE stream buffer. The frontend only
-      // needs "log", "project", and "error" events.
-    }, openRouterModel, resolvedApiKey);
+    const result = await runProjectStream(
+      prompt,
+      (event) => {
+        if (event.type === "log" && event.message) {
+          send({ type: "log", message: event.message });
+        }
+        // Note: "result" events are intentionally not forwarded — they contain large
+        // file payloads that can fragment the SSE stream buffer. The frontend only
+        // needs "log", "project", and "error" events.
+      },
+      openRouterModel,
+      resolvedApiKey,
+      usingFallbackKey
+        ? { maxOutputTokens: OPENROUTER_FALLBACK_MAX_OUTPUT_TOKENS }
+        : undefined
+    );
 
     if (!result.success) {
+      if (
+        usingFallbackKey &&
+        result.error &&
+        isOpenRouterInsufficientCreditError({ message: result.error })
+      ) {
+        send({
+          type: "error",
+          code: "OPENROUTER_INSUFFICIENT_CREDITS",
+          message:
+            "Free tier credits are exhausted or the request is too large. Add your OpenRouter API key in Settings to continue.",
+        });
+        return;
+      }
       send({ type: "error", message: result.error || "AI generation failed" });
       return;
     }
@@ -258,7 +310,16 @@ export async function createProjectStream(req: Request, res: Response) {
     send({ type: "project", projectId: project.id, previewUrl: sandbox.url });
   } catch (err) {
     console.error("Create project stream failed:", err);
-    send({ type: "error", message: "Server error" });
+    if (usingFallbackKey && isOpenRouterInsufficientCreditError(err)) {
+      send({
+        type: "error",
+        code: "OPENROUTER_INSUFFICIENT_CREDITS",
+        message:
+          "Free tier credits are exhausted or the request is too large. Add your OpenRouter API key in Settings to continue.",
+      });
+    } else {
+      send({ type: "error", message: "Server error" });
+    }
   } finally {
     clearInterval(heartbeat);
     res.end();
