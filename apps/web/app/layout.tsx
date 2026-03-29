@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "react-complex-tree/lib/style-modern.css"
 import { AuthProvider } from "@/context/AuthContext";
+import { AppToaster } from "@/components/AppToaster";
 
 
 
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           {children}
+          <AppToaster />
         </AuthProvider>
       </body>
     </html>

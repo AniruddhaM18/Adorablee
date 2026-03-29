@@ -5,6 +5,13 @@ import { useEffect, useState, Suspense } from "react";
 import { ChatSidebar } from "@/src/components/ChatSidebar";
 import { ViewSelector } from "@/src/components/ViewSelector";
 import { NEXT_PUBLIC_BACKEND_URL } from "@/config";
+import { toast } from "sonner";
+
+const SETTINGS_TOAST_CODES = new Set([
+  "FREE_PROJECT_LIMIT_REACHED",
+  "OPENROUTER_INSUFFICIENT_CREDITS",
+  "OPENROUTER_KEY_REQUIRED",
+]);
 
 function PlaygroundContent() {
   const params = useParams<{ projectId: string }>();
@@ -49,6 +56,7 @@ function PlaygroundContent() {
           type?: string;
           message?: string;
           projectId?: string;
+          code?: string;
         };
       } catch (e) {
         if (process.env.NODE_ENV === "development") {
@@ -75,7 +83,18 @@ function PlaygroundContent() {
         return true;
       }
       if (event.type === "error") {
-        setError(event.message || "Something went wrong, please try again.");
+        const msg = event.message || "Something went wrong, please try again.";
+        if (event.code && SETTINGS_TOAST_CODES.has(event.code)) {
+          toast.error("Add your OpenRouter API key in Settings to continue.", {
+            description: msg,
+            duration: 14_000,
+            action: {
+              label: "Open Settings",
+              onClick: () => router.push("/settings"),
+            },
+          });
+        }
+        setError(msg);
         setIsCreating(false);
         return true;
       }

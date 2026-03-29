@@ -20,11 +20,41 @@ type ChatSidebarProps = {
   onFilesUpdate?: (files: any) => void;
 };
 
+const OPENROUTER_CREDITS_URL = "https://openrouter.ai/settings/credits";
+
 export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarProps) {
+  const needsKeyCheck = Boolean(projectId && projectId !== "creating");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  /** null = loading (only when needsKeyCheck), true/false = result */
+  const [hasOwnApiKey, setHasOwnApiKey] = useState<boolean | null>(null);
+  const [showKeyGatePopout, setShowKeyGatePopout] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!projectId || projectId === "creating") {
+      setHasOwnApiKey(true);
+      return;
+    }
+    let cancelled = false;
+    setHasOwnApiKey(null);
+    fetch(`${NEXT_PUBLIC_BACKEND_URL}/auth/api-key`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { hasKey?: boolean }) => {
+        if (!cancelled) setHasOwnApiKey(!!data.hasKey);
+      })
+      .catch(() => {
+        if (!cancelled) setHasOwnApiKey(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (hasOwnApiKey === true) setShowKeyGatePopout(false);
+  }, [hasOwnApiKey]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +62,10 @@ export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarP
 
   function send() {
     if (!input.trim()) return;
+    if (needsKeyCheck && hasOwnApiKey !== true) {
+      setShowKeyGatePopout(true);
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now(),
@@ -85,6 +119,34 @@ export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarP
       });
 
       if (!response.ok) {
+        if (
+          response.status === 403 &&
+          projectId &&
+          projectId !== "creating"
+        ) {
+          try {
+            const body = (await response.json()) as {
+              code?: string;
+            };
+            if (body.code === "OPENROUTER_KEY_REQUIRED") {
+              setHasOwnApiKey(false);
+              setShowKeyGatePopout(true);
+              setIsLoading(false);
+              setMessages((prev) => {
+                if (prev.length < 2) return prev;
+                const last = prev[prev.length - 1];
+                const secondLast = prev[prev.length - 2];
+                if (last?.role === "assistant" && secondLast?.role === "user") {
+                  return prev.slice(0, -2);
+                }
+                return prev;
+              });
+              return;
+            }
+          } catch {
+            /* fall through */
+          }
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -259,7 +321,25 @@ export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarP
       </ScrollArea>
 
       {/* Input */}
-      <div className="shrink-0 p-3 pt-2 border-t border-white/[0.06] bg-[#0d0d0f]">
+      <div className="shrink-0 p-3 pt-2 border-t border-white/[0.06] bg-[#0d0d0f] space-y-2">
+        {showKeyGatePopout && (
+          <div
+            className="rounded-xl border border-white/[0.08] border-l-[3px] border-l-blue-500/55 bg-white/[0.04] px-3 py-2.5 text-[13px] leading-relaxed text-neutral-200 shadow-[inset_0_1px_0_0_rgba(59,130,246,0.08)]"
+            role="status"
+          >
+            <p className="text-neutral-100">
+              Please add your OpenRouter API key to enable chat.
+            </p>
+            <a
+              href={OPENROUTER_CREDITS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1.5 inline-block text-blue-300 underline underline-offset-2 hover:text-blue-200"
+            >
+              Buy OpenRouter credits
+            </a>
+          </div>
+        )}
         <div className="relative flex items-end gap-2 rounded-2xl bg-white/[0.04] border border-white/[0.08] p-2 shadow-inner focus-within:border-white/[0.12] focus-within:ring-1 focus-within:ring-white/5 transition-all duration-200">
           <textarea
             rows={2}
@@ -272,7 +352,11 @@ export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarP
           <button
             type="button"
             onClick={send}
-            disabled={!input.trim() || isLoading}
+            disabled={
+              !input.trim() ||
+              isLoading ||
+              (needsKeyCheck && hasOwnApiKey === null)
+            }
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl grad-blue text-white shadow-md disabled:opacity-40 disabled:pointer-events-none hover:opacity-95 active:scale-[0.98] transition-all duration-150"
           >
             <FaArrowUp size={16} className="shrink-0" />

@@ -12,6 +12,7 @@ import { IoMdGlobe } from "react-icons/io";
 import { IoReload, IoCheckmark, IoCopyOutline } from "react-icons/io5";
 import { MdSmartphone, MdDesktopMac, MdDownload } from "react-icons/md";
 import { NEXT_PUBLIC_BACKEND_URL } from "@/config";
+import { toast } from "sonner";
 // import Loader from "./Loader";
 import TerminalLoader from "./termloader";
 
@@ -138,6 +139,10 @@ export function ViewSelector({
 
       if (response.ok && data.url) {
         setDeployedUrl(data.url);
+        toast(
+          "Deployments go live right away, but it can take a few minutes for your site to show on the domain.",
+          { position: "bottom-right", duration: 7000 }
+        );
         window.open(data.url, "_blank");
       } else {
         alert(`Deploy failed: ${data.error || "Unknown error"}`);
