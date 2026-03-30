@@ -16,9 +16,23 @@ export const OPENROUTER_FALLBACK_MAX_OUTPUT_TOKENS =
 
 export const E2B_API_KEY = process.env.E2B_API_KEY;
 
-export const JWT_SECRET = process.env.JWT_SECRET;
+function requireProdEnv(name: string): string {
+  const v = process.env[name];
+  if (!v?.trim()) {
+    throw new Error(`Missing required env in production: ${name}`);
+  }
+  return v.trim();
+}
 
-export const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+export const JWT_SECRET =
+  process.env.NODE_ENV === "production"
+    ? requireProdEnv("JWT_SECRET")
+    : process.env.JWT_SECRET;
+
+export const ENCRYPTION_KEY =
+  process.env.NODE_ENV === "production"
+    ? requireProdEnv("ENCRYPTION_KEY")
+    : process.env.ENCRYPTION_KEY;
 
 /// cloudflare
 export const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
