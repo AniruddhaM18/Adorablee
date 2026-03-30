@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { signinSchema, signupSchema } from "../schema.js";
+import { deleteAccountSchema, signinSchema, signupSchema } from "../schema.js";
 import { prisma } from "@repo/database";
 import { JWT_SECRET } from "../config.js";
 import { encrypt } from "../crypto.js";
@@ -158,6 +158,73 @@ export async function getMe(req: Request, res: Response) {
             message: "Invalid token"
         })
     }
+}
+
+/** POST /auth/sse-token — exchange session cookie for a short-lived JWT usable only as ?token= for SSE (e.g. EventSource). */
+export async function issueSseToken(req: Request, res: Response) {
+  try {
+    const token = req.cookies.sessionToken;
+    if (!token) {
+      return res.status(401).json({ message: "not authenticated" });
+    }
+    if (!JWT_SECRET) {
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    const payload = jwt.verify(token, JWT_SECRET) as { userId?: string; email?: string; sse?: boolean };
+    if (payload.sse === true) {
+      return res.status(400).json({ message: "Use session cookie to obtain an SSE token" });
+    }
+    if (!payload.userId || !payload.email) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    const sseToken = jwt.sign(
+      { userId: payload.userId, email: payload.email, sse: true },
+      JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    return res.json({ token: sseToken });
+  } catch (err) {
+    if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    console.error("issueSseToken error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+/** DELETE /auth/account — password-confirmed; cascades projects/versions when schema uses onDelete: Cascade */
+export async function deleteAccount(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const parsed = deleteAccountSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "password is required" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const ok = await bcrypt.compare(parsed.data.password, user.password);
+    if (!ok) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
+
+    await prisma.user.delete({ where: { id: userId } });
+    res.clearCookie("sessionToken", { path: "/" });
+    return res.status(204).send();
+  } catch (err) {
+    console.error("deleteAccount error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 }
 
 // GET /auth/api-key — returns whether the user has configured a key (never returns the key itself)
