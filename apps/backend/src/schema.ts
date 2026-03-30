@@ -10,3 +10,7 @@ export const signinSchema = z.object({
     password: z.string().min(8)
 });
 
+export const deleteAccountSchema = z.object({
+    password: z.string().min(1),
+});
+

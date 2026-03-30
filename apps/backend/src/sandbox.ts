@@ -19,7 +19,7 @@ export async function createSandbox(
 
   // Create sandbox
   const sbx = await Sandbox.create({
-    timeoutMs: 3600_000 //1hr 
+    timeoutMs: 600_000, // 10 minutes
   });
 
   log(`Sandbox created: ${sbx.sandboxId}`);
