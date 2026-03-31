@@ -38,12 +38,27 @@ const corsOrigins = getCorsAllowedOrigins();
 //     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 //   })
 // );
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: false, // remove this line entirely
-}));
-app.options('*', cors());
+// Replace your current cors block with this:
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow non-browser requests (Postman, server-to-server, health checks)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      // Reject but don't throw — let the browser show the CORS error
+      callback(null, false);
+    },
+    credentials: true, // ← required for cookies
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  })
+);
+// No need for a separate app.options — cors() handles preflight automatically
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 
