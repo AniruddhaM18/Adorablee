@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CardSpotlight } from "./card-spotlight";
 
 
@@ -7,52 +8,66 @@ export function CardSpotlightSection() {
   return (
     <div className="max-w-7xl mx-auto px-6">
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <AuthCard />
-        <AnalyticsCard />
+        <GenerateCard />
+        <PreviewCard />
         <DeployCard />
       </div>
     </div>
   );
 }
 
-function AuthCard() {
+function GenerateCard() {
   return (
-    <CardSpotlight className="h-96 w-full">
-      <h3 className="text-xl font-bold text-white relative z-20">
-        Authentication
-      </h3>
+    <CardSpotlight className="min-h-96 w-full flex flex-col justify-between">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 relative z-20">
+          From idea to repo
+        </p>
+        <h3 className="text-xl font-bold text-white relative z-20 mt-2">
+          Describe and generate
+        </h3>
 
-      <p className="text-neutral-300 mt-4 relative z-20">
-        Secure your account in minutes.
-      </p>
+        <p className="text-neutral-300 text-sm mt-4 relative z-20 leading-relaxed">
+          Describe your app in plain language—the agent builds structure and files
+          so you skip boilerplate before the first preview.
+        </p>
+      </div>
 
-      <ul className="mt-12 space-y-2 relative z-20">
-        <Step title="Enter email address" />
-        <Step title="Create a strong password" />
-        <Step title="Enable two-factor authentication" />
-        <Step title="Verify your identity" />
-      </ul>
+      <div className="flex flex-1 min-h-0 flex-col justify-end relative z-20">
+        <ul className="space-y-2">
+          <Step title="Describe your app idea" />
+          <Step title="Get generated files and structure" />
+          <Step title="Saved as a project you can reopen" />
+        </ul>
+      </div>
     </CardSpotlight>
   );
 }
 
 
-function AnalyticsCard() {
+function PreviewCard() {
   return (
-    <CardSpotlight className="h-96 w-full">
-      <h3 className="text-xl font-bold text-white relative z-20">
-        Analytics
-      </h3>
+    <CardSpotlight className="min-h-96 w-full flex flex-col justify-between">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 relative z-20">
+          See it running
+        </p>
+        <h3 className="text-xl font-bold text-white relative z-20 mt-2">
+          Preview and refine
+        </h3>
 
-      <p className="text-neutral-300 mt-2 relative z-20">
-        Real-time insights that drive growth.
-      </p>
+        <p className="text-neutral-300 text-sm mt-4 relative z-20 leading-relaxed">
+          Sandbox preview, in-browser editing, and chat in one place—iterate until
+          it matches what you want.
+        </p>
+      </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-4 relative z-20">
-        <Stat label="Visitors" value="124K" />
-        <Stat label="Conversion" value="4.8%" />
-        <Stat label="Bounce Rate" value="32%" />
-        <Stat label="Revenue" value="$12.4K" />
+      <div className="flex flex-1 min-h-0 flex-col justify-end relative z-20">
+        <ul className="space-y-2">
+          <Step title="Live preview from an isolated sandbox" />
+          <Step title="Edit code in the browser" />
+          <Step title="Chat with the agent to refine the app" />
+        </ul>
       </div>
     </CardSpotlight>
   );
@@ -60,26 +75,33 @@ function AnalyticsCard() {
 
 function DeployCard() {
   return (
-    <CardSpotlight className="h-96 w-full flex flex-col justify-between">
+    <CardSpotlight className="min-h-96 w-full flex flex-col justify-between">
       <div>
-        <h3 className="text-xl font-bold text-white relative z-20">
-          One-click Deploy
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 relative z-20">
+          Go live
+        </p>
+        <h3 className="text-xl font-bold text-white relative z-20 mt-2">
+          Ship to the web
         </h3>
 
-        <p className="text-neutral-300 mt-3 relative z-20">
-          Launch globally in seconds with edge-first infrastructure.
+        <p className="text-neutral-300 text-sm mt-4 relative z-20 leading-relaxed">
+          Connect Cloudflare once, then deploy from the workspace—no zips or extra
+          CLIs.
         </p>
 
-        <ul className="mt-6 space-y-3 relative z-20">
-          <Feature text="Cloudflare edge hosting" />
-          <Feature text="Automatic SSL & CDN" />
-          <Feature text="Instant rollbacks" />
+        <ul className="mt-6 space-y-2 relative z-20 list-none pl-0">
+          <Feature text="Deploy from the product UI" />
+          <Feature text="HTTPS hosting on Cloudflare Pages" />
+          <Feature text="Edge delivery and version history as you iterate" />
         </ul>
       </div>
 
-      <button className="relative z-20 mt-6 w-full rounded-lg bg-neutral-700/60 py-3 text-white font-medium hover:bg-neutral-500/40 transition">
-        Deploy now
-      </button>
+      <Link
+        href="/auth/signup"
+        className="relative z-20 mt-8 flex w-full items-center justify-center rounded-lg bg-neutral-700/60 py-3 text-white font-medium hover:bg-neutral-500/40 transition"
+      >
+        Get started
+      </Link>
     </CardSpotlight>
   );
 }
@@ -93,17 +115,8 @@ export function Step({ title }: { title: string }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-white/5 p-4">
-      <p className="text-sm text-neutral-400">{label}</p>
-      <p className="text-2xl font-bold text-white">{value}</p>
-    </div>
-  );
-}
-
 function Feature({ text }: { text: string }) {
-  return <p className="text-neutral-200">• {text}</p>;
+  return <li className="text-neutral-200">• {text}</li>;
 }
 
 function CheckIcon() {

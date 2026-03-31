@@ -38,35 +38,51 @@ const FAQ_ITEMS = [
 
 export default function FaqSection() {
   return (
-    <section className="relative z-10 mx-auto max-w-7xl px-8 py-24">
-      <h2 className="mb-4 text-center text-5xl font-bold text-gray-100">
-        Frequently asked questions
-      </h2>
-      <p className="mx-auto mb-12 max-w-2xl text-center text-gray-400">
-        Everything you need to know about building landing pages with Adorable.
-      </p>
+    <section className="relative z-10 bg-gradient-to-b from-black via-neutral-950/80 to-black">
+      <div className="mx-auto max-w-7xl px-6 py-24">
+        <h2 className="mb-4 text-center text-4xl font-semibold tracking-tight text-slate-300 text-shadow-black/10 text-shadow-lg sm:text-5xl">
+          Frequently asked questions
+        </h2>
+        <p className="mx-auto mb-10 max-w-2xl text-center text-base text-neutral-500">
+          Everything you need to know about building landing pages with Adorable.
+        </p>
 
-      <div className="mx-auto w-full max-w-3xl">
-        <Accordion type="single" collapsible className="w-full">
-          {FAQ_ITEMS.map((item, i) => (
-            <AccordionItem
-              key={item.q}
-              value={`faq-${i}`}
-              className="border-neutral-800"
-            >
-              <AccordionTrigger className="group flex w-full items-center justify-between gap-4 py-5 text-lg font-medium text-gray-100 hover:text-white">
-                <span className="pr-2">{item.q}</span>
-                <Plus
-                  className="h-5 w-5 shrink-0 text-neutral-400 transition-transform duration-300 ease-out group-data-[state=open]:rotate-45"
-                  aria-hidden
-                />
-              </AccordionTrigger>
-              <AccordionContent className="text-base leading-relaxed text-gray-400">
-                {item.a}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <div className="mx-auto w-full max-w-3xl rounded-md border border-neutral-800 bg-neutral-950/50 p-4 backdrop-blur-sm md:p-6">
+          <Accordion type="single" collapsible className="w-full">
+            {FAQ_ITEMS.map((item, i) => {
+              const isFirst = i === 0;
+              const isLast = i === FAQ_ITEMS.length - 1;
+              const triggerRadius = isFirst
+                ? "rounded-t-sm"
+                : isLast
+                  ? "rounded-sm data-[state=closed]:rounded-b-sm data-[state=open]:rounded-b-none"
+                  : "rounded-sm";
+
+              return (
+                <AccordionItem
+                  key={item.q}
+                  value={`faq-${i}`}
+                  className="border-neutral-700/50"
+                >
+                  <AccordionTrigger
+                    className={`group flex w-full items-center justify-between gap-4 px-3 -mx-3 py-5 text-lg font-medium text-neutral-200 transition-colors hover:bg-neutral-800/40 hover:text-neutral-100 ${triggerRadius}`}
+                  >
+                    <span className="pr-2">{item.q}</span>
+                    <Plus
+                      className="h-5 w-5 shrink-0 text-neutral-400 transition-transform duration-300 ease-out group-data-[state=open]:rotate-45"
+                      aria-hidden
+                    />
+                  </AccordionTrigger>
+                  <AccordionContent
+                    className={`text-base leading-relaxed text-neutral-400 ${isLast ? "[&>div]:rounded-b-sm" : ""}`}
+                  >
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
       </div>
     </section>
   );

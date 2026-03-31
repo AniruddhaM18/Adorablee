@@ -41,7 +41,7 @@ export const CardSpotlight = forwardRef<
     <div
       ref={ref} // ref is now supported
       className={cn(
-        "group/spotlight p-10 rounded-md relative border border-neutral-800 bg-black dark:border-neutral-800",
+        "group/spotlight p-10 rounded-md relative border border-neutral-800 bg-neutral-950 dark:border-neutral-800",
         className
       )}
       onMouseMove={handleMouseMove}

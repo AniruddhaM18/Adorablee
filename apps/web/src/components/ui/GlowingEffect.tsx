@@ -23,7 +23,7 @@ export function GlowingEffectDemoSecond() {
       <GridItem
         area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
         icon={<Lock className="h-4 w-4 text-neutral-400" />}
-        title="Build things the Adorable way,built by Aniruddha"
+        title="Build things the Adorablee way,built by Aniruddha"
         description="Powered by Openrouter"
       />
 
