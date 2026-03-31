@@ -272,6 +272,9 @@ importers:
       '@types/node':
         specifier: ^24.10.4
         version: 24.10.4
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       prisma:
         specifier: ^6.0.0
         version: 6.19.0(typescript@5.5.4)
