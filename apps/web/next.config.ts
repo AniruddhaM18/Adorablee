@@ -2,7 +2,7 @@
 const backendRewriteBase =
   process.env.BACKEND_REWRITE_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "http://localhost:3001";
+  "https://api.adorablee.fun";
 
 const nextConfig = {
   async rewrites() {
