@@ -38,12 +38,14 @@ const corsOrigins = getCorsAllowedOrigins();
 //     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 //   })
 // );
-app.use(cors({
-  origin: "*",
+const corsOptions = {
+  origin: ["https://www.adorablee.fun", "https://adorablee.fun", "http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: false, // remove this line entirely
-}));
-app.options('*', cors());
+  credentials: true,
+};
+
+app.options("*", cors(corsOptions)); 
+app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 
