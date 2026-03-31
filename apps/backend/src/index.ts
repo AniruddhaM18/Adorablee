@@ -41,20 +41,8 @@ const corsOrigins = getCorsAllowedOrigins();
 // Replace your current cors block with this:
 app.use(
   cors({
-    origin(origin, callback) {
-      // Allow non-browser requests (Postman, server-to-server, health checks)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      // Reject but don't throw — let the browser show the CORS error
-      callback(null, false);
-    },
-    credentials: true, // ← required for cookies
+    origin: ["https://adorablee.fun", "https://www.adorablee.fun"],
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
