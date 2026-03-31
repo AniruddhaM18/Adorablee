@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-import logo from "../../public/adlogo.png";
 import { FaSquareGithub, FaLinkedin, FaSquareXTwitter } from "react-icons/fa6";
 import { SiGmail } from "react-icons/si";
 import { SparklesCore } from "./ui/sparkles";
@@ -19,7 +18,7 @@ export default function Footer() {
 
           <div className="flex gap-8">
             <a
-              href="https://github.com/AniruddhaM18/Adorable/"
+              href="https://github.com/AniruddhaM18/Adorablee/"
               target="_blank"
               rel="noopener noreferrer"
               className="block text-neutral-400 hover:text-neutral-300 transition"
