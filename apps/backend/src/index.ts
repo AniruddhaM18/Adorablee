@@ -39,11 +39,14 @@ const corsOrigins = getCorsAllowedOrigins();
 //   })
 // );
 app.use(cors({
-  origin: (origin, callback) => {
-    callback(null, true); // allow all origins
-  },
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
+  credentials: false, // remove this line entirely
+}));
+app.options('*', cors());app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: false, // remove this line entirely
 }));
 app.options('*', cors());
 app.use(cookieParser());
