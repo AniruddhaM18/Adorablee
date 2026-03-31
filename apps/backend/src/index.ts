@@ -43,11 +43,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: false, // remove this line entirely
 }));
-app.options('*', cors());app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: false, // remove this line entirely
-}));
 app.options('*', cors());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
