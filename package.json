@@ -22,7 +22,8 @@
     "turbo": "^2.6.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x",
+    "pnpm": "10.15.0"
   },
   "name": "with-prisma",
   "dependencies": {
