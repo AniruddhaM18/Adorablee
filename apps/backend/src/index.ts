@@ -39,10 +39,13 @@ const corsOrigins = getCorsAllowedOrigins();
 //   })
 // );
 app.use(cors({
-  origin:"*",
-  methods:["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials:true,
-}))
+  origin: (origin, callback) => {
+    callback(null, true); // allow all origins
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+}));
+app.options('*', cors());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 
