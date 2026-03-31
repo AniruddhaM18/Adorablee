@@ -1,8 +1,10 @@
+import { cn } from "@/lib/utils";
+
 export const GPT = ({ className }: { className: string }) => {
     return (
       <svg
-        fill="var(--foreground)"
-        className={className}
+        fill="currentColor"
+        className={cn(className, "text-neutral-200")}
         viewBox="0 0 24 24"
         role="img"
         xmlns="http://www.w3.org/2000/svg"

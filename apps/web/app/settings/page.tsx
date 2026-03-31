@@ -162,7 +162,7 @@ export default function SettingsPage() {
             <header className="fixed top-0 inset-x-0 z-50 px-6 py-4 flex items-center border-b border-neutral-900/60 bg-black/70 backdrop-blur-md">
                 <button
                     type="button"
-                    onClick={() => router.back()}
+                    onClick={() => router.push("/")}
                     className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-sm"
                 >
                     <FiArrowLeft size={16} />
@@ -219,7 +219,7 @@ export default function SettingsPage() {
                     <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6 md:px-10 md:py-8">
                         <div className="max-w-xl">
                             {activeSection === "profile" && (
-                                <div className="rounded-xl border border-neutral-800/90 bg-neutral-950/40 p-6">
+                                <div className="rounded-md border border-neutral-800/90 bg-neutral-950/40 p-6">
                                     <section>
                                         <h2 className="text-base font-semibold text-white">Profile</h2>
                                         <div className="mt-4">
@@ -307,7 +307,7 @@ export default function SettingsPage() {
                                                 type="button"
                                                 onClick={savePassword}
                                                 disabled={pwdSaving}
-                                                className="bg-neutral-100 text-neutral-950 px-4 py-2 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="bg-neutral-100 text-neutral-950 px-4 py-2 rounded-md text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {pwdSaving ? "Saving…" : "Update password"}
                                             </button>
@@ -317,7 +317,7 @@ export default function SettingsPage() {
                             )}
 
                             {activeSection === "apikey" && (
-                                <div className="rounded-xl border border-neutral-800/90 bg-neutral-950/40 p-6">
+                                <div className="rounded-md border border-neutral-800/90 bg-neutral-950/40 p-6">
                                     <h2 className="text-base font-semibold text-white">OpenRouter API key</h2>
                                     <p className="text-[13px] text-neutral-500 mt-1 leading-relaxed">
                                         Stored encrypted. Used for model calls on your projects.
@@ -382,7 +382,7 @@ export default function SettingsPage() {
                                             type="button"
                                             onClick={saveApiKey}
                                             disabled={keySaving || !apiKey.trim()}
-                                            className="bg-neutral-100 text-neutral-950 px-4 py-2 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="bg-neutral-100 text-neutral-950 px-4 py-2 rounded-md text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {keySaving ? "Saving…" : hasKey ? "Replace key" : "Save key"}
                                         </button>

@@ -5,6 +5,7 @@ import { deleteAccountSchema, signinSchema, signupSchema } from "../schema.js";
 import { prisma } from "@repo/database";
 import { JWT_SECRET } from "../config.js";
 import { encrypt } from "../crypto.js";
+import { sessionCookieOptions } from "../sessionCookie.js";
 
 //signup controller
 export async function signup(req: Request, res: Response) {
@@ -44,13 +45,7 @@ export async function signup(req: Request, res: Response) {
         expiresIn: "7d"
     });
 
-    res.cookie("sessionToken", token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie("sessionToken", token, sessionCookieOptions());
 
     return res.json({
         message: "Signup Successfull",
@@ -96,13 +91,7 @@ export async function signin(req: Request, res: Response) {
         expiresIn: "7d"
     });
 
-    res.cookie("sessionToken", token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie("sessionToken", token, sessionCookieOptions());
 
     return res.json({
         message: "signin successfull",
@@ -115,7 +104,7 @@ export async function signin(req: Request, res: Response) {
 
 //signot/logout
 export async function logout(req: Request, res: Response) {
-    res.clearCookie("sessionToken", { path: "/" });
+    res.clearCookie("sessionToken", sessionCookieOptions());
 
     return res.json({
         message: "Logged out successfully"
@@ -152,7 +141,7 @@ export async function getMe(req: Request, res: Response) {
             })
         }
 
-        return res.status(201).json(user);
+        return res.status(200).json(user);
     } catch (err) {
         return res.status(401).json({
             message: "Invalid token"
@@ -219,7 +208,7 @@ export async function deleteAccount(req: Request, res: Response) {
     }
 
     await prisma.user.delete({ where: { id: userId } });
-    res.clearCookie("sessionToken", { path: "/" });
+    res.clearCookie("sessionToken", sessionCookieOptions());
     return res.status(204).send();
   } catch (err) {
     console.error("deleteAccount error:", err);

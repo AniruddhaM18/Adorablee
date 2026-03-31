@@ -3,7 +3,11 @@ import "dotenv/config";
 import { ChatOpenAI } from "@langchain/openai";
 import { StateGraph, MessagesAnnotation, END } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { AIMessage, ToolMessage } from "@langchain/core/messages";
+import {
+    AIMessage,
+    ToolMessage,
+    isToolMessage,
+} from "@langchain/core/messages";
 import { OPENROUTER_API_KEY } from "./config.js";
 import { DEFAULT_OPENROUTER_MODEL } from "./models.js";
 import { getEditSystemPrompt, getErrorFixPrompt } from "./prompt.js";
@@ -79,6 +83,86 @@ function safeJsonParse(value: string) {
     }
 }
 
+function parseToolPayload(content: unknown): unknown {
+    if (typeof content === "string") {
+        return safeJsonParse(content) ?? content;
+    }
+    return content;
+}
+
+/** Process every ToolMessage in a chunk (deduped by tool_call_id across the whole stream). */
+function processToolMessagesInChunk(
+    messages: unknown[] | undefined,
+    seenToolCallIds: Set<string>,
+    collectedFiles: FileChange[],
+    onEvent: (event: any) => void,
+    options: { fileEventType: "file_update" | "file_fix"; logPrefix: string }
+) {
+    if (!Array.isArray(messages)) return;
+
+    for (const msg of messages) {
+        if (!isToolMessage(msg)) continue;
+
+        const toolCallId = msg.tool_call_id ?? "";
+        if (seenToolCallIds.has(toolCallId)) continue;
+        seenToolCallIds.add(toolCallId);
+
+        console.log(`${options.logPrefix}: Got ToolMessage (tool_call_id=${toolCallId}, name=${msg.name ?? "?"})`);
+
+        const content = parseToolPayload(msg.content);
+
+        if (content && typeof content === "object") {
+            const files = (content as { files?: unknown }).files;
+            if (Array.isArray(files)) {
+                console.log(
+                    `${options.logPrefix}: Found ${files.length} files in tool result (name=${msg.name ?? "?"})`
+                );
+                let added = 0;
+                for (const file of files) {
+                    if (file && typeof file === "object" && (file as { path?: string }).path) {
+                        collectedFiles.push(file as FileChange);
+                        added++;
+                        onEvent({
+                            type: options.fileEventType,
+                            file,
+                        });
+                    }
+                }
+                if (added > 0 && msg.name === "modify_app") {
+                    console.log(
+                        `${options.logPrefix}: collected ${added} file(s) from modify_app`
+                    );
+                }
+            }
+
+            const c = content as { type?: string; message?: string };
+            if (c.type === "chat" && c.message) {
+                onEvent({
+                    type: "token",
+                    content: c.message,
+                });
+            }
+        }
+
+        onEvent({
+            type: "tool",
+            content: msg.content,
+        });
+    }
+}
+
+function emitAssistantTokensFromChunk(messages: unknown[] | undefined, onEvent: (event: any) => void) {
+    const last = messages?.at(-1);
+    if (!(last instanceof AIMessage)) return;
+    if (typeof last.content !== "string" || !last.content) return;
+    // Rely on chat_message for summary when the model is invoking tools (avoids duplicate prose).
+    if (last.tool_calls && last.tool_calls.length > 0) return;
+    onEvent({
+        type: "token",
+        content: last.content,
+    });
+}
+
 export async function runEditAgentStream(
     currentFiles: Record<string, string>,
     userMessage: string,
@@ -100,55 +184,18 @@ export async function runEditAgentStream(
     const stream = await editGraph.stream({ messages }, { recursionLimit: 50 });
 
     const collectedFiles: FileChange[] = [];
+    const seenToolCallIds = new Set<string>();
 
     try {
         for await (const chunk of stream) {
             console.log("runEditAgentStream: Processing chunk...");
             for (const state of Object.values(chunk)) {
-                const last = (state as any).messages?.at(-1);
-                if (!last) continue;
-
-                if (last instanceof AIMessage && typeof last.content === "string") {
-                    onEvent({
-                        type: "token",
-                        content: last.content,
-                    });
-                }
-
-                if (last instanceof ToolMessage) {
-                    console.log("runEditAgentStream: Got ToolMessage");
-                    const content =
-                        typeof last.content === "string"
-                            ? safeJsonParse(last.content) ?? last.content
-                            : last.content;
-
-                    if (content && typeof content === "object") {
-                        if (Array.isArray((content as any).files)) {
-                            console.log(`runEditAgentStream: Found ${(content as any).files.length} files in tool result`);
-                            for (const file of (content as any).files) {
-                                if (file?.path) {
-                                    collectedFiles.push(file);
-                                    onEvent({
-                                        type: "file_update",
-                                        file: file,
-                                    });
-                                }
-                            }
-                        }
-
-                        if ((content as any).type === "chat" && (content as any).message) {
-                            onEvent({
-                                type: "token",
-                                content: (content as any).message,
-                            });
-                        }
-                    }
-
-                    onEvent({
-                        type: "tool",
-                        content: last.content,
-                    });
-                }
+                const msgs = (state as { messages?: unknown[] }).messages;
+                processToolMessagesInChunk(msgs, seenToolCallIds, collectedFiles, onEvent, {
+                    fileEventType: "file_update",
+                    logPrefix: "runEditAgentStream",
+                });
+                emitAssistantTokensFromChunk(msgs, onEvent);
             }
         }
 
@@ -252,55 +299,18 @@ export async function runErrorFixStream(
     const stream = await editGraph.stream({ messages }, { recursionLimit: 50 });
 
     const collectedFiles: FileChange[] = [];
+    const seenToolCallIds = new Set<string>();
 
     try {
         for await (const chunk of stream) {
             console.log("runErrorFixStream: Processing chunk...");
             for (const state of Object.values(chunk)) {
-                const last = (state as any).messages?.at(-1);
-                if (!last) continue;
-
-                if (last instanceof AIMessage && typeof last.content === "string") {
-                    onEvent({
-                        type: "token",
-                        content: last.content,
-                    });
-                }
-
-                if (last instanceof ToolMessage) {
-                    console.log("runErrorFixStream: Got ToolMessage");
-                    const content =
-                        typeof last.content === "string"
-                            ? safeJsonParse(last.content) ?? last.content
-                            : last.content;
-
-                    if (content && typeof content === "object") {
-                        if (Array.isArray((content as any).files)) {
-                            console.log(`runErrorFixStream: Found ${(content as any).files.length} files in tool result`);
-                            for (const file of (content as any).files) {
-                                if (file?.path) {
-                                    collectedFiles.push(file);
-                                    onEvent({
-                                        type: "file_fix",
-                                        file: file,
-                                    });
-                                }
-                            }
-                        }
-
-                        if ((content as any).type === "chat" && (content as any).message) {
-                            onEvent({
-                                type: "token",
-                                content: (content as any).message,
-                            });
-                        }
-                    }
-
-                    onEvent({
-                        type: "tool",
-                        content: last.content,
-                    });
-                }
+                const msgs = (state as { messages?: unknown[] }).messages;
+                processToolMessagesInChunk(msgs, seenToolCallIds, collectedFiles, onEvent, {
+                    fileEventType: "file_fix",
+                    logPrefix: "runErrorFixStream",
+                });
+                emitAssistantTokensFromChunk(msgs, onEvent);
             }
         }
 

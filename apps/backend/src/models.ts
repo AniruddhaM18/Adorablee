@@ -20,3 +20,8 @@ export function resolveOpenRouterModel(clientKey?: string | null): string {
   const id = OPENROUTER_MODEL_BY_KEY[trimmed];
   return id ?? DEFAULT_OPENROUTER_MODEL;
 }
+
+/** Keys allowed when using the server OpenRouter fallback (free tier). */
+export function isGeminiClientModelKey(key: string): boolean {
+  return key.startsWith("gemini-");
+}

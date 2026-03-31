@@ -16,7 +16,7 @@ export default function LandingSection() {
                 </div>
             </section>
 
-            <section className="mt-10">
+            <section className="mt-10 mb-16 md:mb-24">
                 <CardSpotlightSection />
             </section>
 

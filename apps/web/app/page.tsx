@@ -20,12 +20,12 @@ export default function Home() {
         <div className="min-h-screen bg-black relative">
             <Navbar />
 
-            <section className={`relative overflow-hidden ${isLoggedIn ? "min-h-[60vh]" : "h-screen"}`}>
+            <section className={`relative z-30 ${isLoggedIn ? "min-h-[60vh]" : "h-screen"}`}>
                 <div className="absolute inset-0 pointer-events-none z-0">
                     <GL hovering={hovering} />
                 </div>
 
-                <div className={`relative z-10 max-w-7xl mx-auto px-8 pt-24 text-center ${isLoggedIn ? "pb-16" : "pb-32"}`}>
+                <div className={`relative z-30 max-w-7xl mx-auto px-8 pt-24 text-center ${isLoggedIn ? "pb-16" : "pb-32"}`}>
                     <div className="max-w-4xl mx-auto">
                         <h1 className={`text-4xl md:text-7xl font-semibold text-white mb-5 ${isLoggedIn ? "mt-[180px]" : "mt-[260px]"}`}>
                             Build something Adorable

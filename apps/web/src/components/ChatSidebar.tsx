@@ -91,7 +91,7 @@ export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarP
     // Use edit endpoint if projectId is provided, otherwise use regular chat
     const endpoint = projectId
       ? `${NEXT_PUBLIC_BACKEND_URL}/api/chat/edit/${projectId}`
-      : "/api/chat";
+      : `${NEXT_PUBLIC_BACKEND_URL}/api/chat`;
 
     // Build URL with payload
     const payloadParam = encodeURIComponent(

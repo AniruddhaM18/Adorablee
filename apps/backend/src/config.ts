@@ -24,6 +24,19 @@ function requireProdEnv(name: string): string {
   return v.trim();
 }
 
+/** Comma-separated browser origins allowed for CORS (e.g. `https://app.example.com,https://preview.example.com`). */
+export function getCorsAllowedOrigins(): string[] {
+  const raw =
+    process.env.NODE_ENV === "production"
+      ? requireProdEnv("FRONTEND_URL")
+      : (process.env.FRONTEND_URL?.trim() ??
+        "http://localhost:3000,http://127.0.0.1:3000");
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export const JWT_SECRET =
   process.env.NODE_ENV === "production"
     ? requireProdEnv("JWT_SECRET")

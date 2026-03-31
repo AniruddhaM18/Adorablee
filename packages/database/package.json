@@ -3,17 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-
-  "main": "./src/client.ts",
-  "types": "./src/client.ts",
-
+  "main": "./dist/client.js",
+  "types": "./dist/client.d.ts",
   "exports": {
     ".": {
-      "import": "./src/client.ts",
-      "types": "./src/client.ts"
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
     }
   },
-
   "scripts": {
     "generate": "prisma generate",
     "build": "prisma generate && tsc -b",
@@ -23,13 +20,11 @@
     "db:seed": "tsx src/seed.ts",
     "studio": "prisma studio"
   },
-
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "bcrypt": "^6.0.0",
     "zod": "^4.1.13"
   },
-
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
