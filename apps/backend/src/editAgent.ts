@@ -8,7 +8,7 @@ import {
     ToolMessage,
     isToolMessage,
 } from "@langchain/core/messages";
-import { OPENROUTER_API_KEY } from "./config.js";
+import { getOpenRouterHttpReferer, OPENROUTER_API_KEY } from "./config.js";
 import { DEFAULT_OPENROUTER_MODEL } from "./models.js";
 import { getEditSystemPrompt, getErrorFixPrompt } from "./prompt.js";
 import { modifyTool, FileChange } from "./modifyTools.js";
@@ -49,7 +49,7 @@ export function buildEditGraph(model: string, apiKey: string) {
         configuration: {
             baseURL: "https://openrouter.ai/api/v1",
             defaultHeaders: {
-                "HTTP-Referer": "http://localhost:3000",
+                "HTTP-Referer": getOpenRouterHttpReferer(),
                 "X-Title": "Adorable",
             },
         },

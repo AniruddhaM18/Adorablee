@@ -37,6 +37,14 @@ export function getCorsAllowedOrigins(): string[] {
     .filter(Boolean);
 }
 
+/** Referer sent to OpenRouter. `OPENROUTER_HTTP_REFERER` overrides; else first `FRONTEND_URL` origin; else localhost. */
+export function getOpenRouterHttpReferer(): string {
+  const explicit = process.env.OPENROUTER_HTTP_REFERER?.trim();
+  if (explicit) return explicit;
+  const first = getCorsAllowedOrigins()[0];
+  return first ?? "http://localhost:3000";
+}
+
 export const JWT_SECRET =
   process.env.NODE_ENV === "production"
     ? requireProdEnv("JWT_SECRET")
