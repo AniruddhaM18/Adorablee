@@ -10,7 +10,7 @@ import {
   OPENROUTER_API_KEY,
   OPENROUTER_FALLBACK_MAX_OUTPUT_TOKENS,
 } from "../config.js";
-import { resolveOpenRouterModel } from "../models.js";
+import { isGeminiClientModelKey, resolveOpenRouterModel } from "../models.js";
 
 function isOpenRouterInsufficientCreditError(err: unknown): boolean {
   if (err instanceof APIError && err.status === 402) return true;
@@ -219,6 +219,19 @@ export async function createProjectStream(req: Request, res: Response) {
         type: "error",
         code: "FREE_PROJECT_LIMIT_REACHED",
         message: `You've used all ${FREE_PROJECT_LIMIT} free projects. Add your own OpenRouter API key in Settings to continue.`,
+      });
+      return res.end();
+    }
+
+    if (
+      clientModelKey &&
+      !isGeminiClientModelKey(clientModelKey)
+    ) {
+      send({
+        type: "error",
+        code: "OPENROUTER_KEY_REQUIRED",
+        message:
+          "Non-Gemini models require your own OpenRouter API key. Add one in Settings.",
       });
       return res.end();
     }

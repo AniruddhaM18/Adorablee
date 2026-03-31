@@ -37,13 +37,13 @@ Adorable/
 └── pnpm-workspace.yaml
 ```
 
-**Note:** The app uses **PostgreSQL** in production (see `packages/database/prisma/schema.prisma`). The repo’s `docker-compose.yml` uses MySQL; for local dev use a Postgres instance or adjust Docker accordingly.
+**Note:** `docker-compose.yml` starts **PostgreSQL 16** on port `5432` (user/password/db: `adorable`). Point `DATABASE_URL` at it for local dev, or use any other Postgres instance.
 
 ## Prerequisites
 
 - **Node.js** ≥ 18 (recommended: 20)
 - **pnpm** 10.x (`npm i -g pnpm`)
-- **PostgreSQL** (or MySQL if using the existing Docker setup)
+- **PostgreSQL** (see `docker-compose.yml` or your own instance)
 - API keys: **OpenRouter**, **E2B**, and optionally **Cloudflare** (for deploy)
 
 ## Getting started
@@ -74,8 +74,8 @@ E2B_API_KEY="e2b_..."
 CLOUDFLARE_ACCOUNT_ID=""
 CLOUDFLARE_API_TOKEN=""
 
-# Frontend URL (for CORS)
-FRONTEND_URL="http://localhost:3000"
+# Frontend URL(s) for CORS — comma-separated if you need more than one origin
+FRONTEND_URL="http://localhost:3000,http://127.0.0.1:3000"
 ```
 
 For the Next.js app (`apps/web`):
@@ -117,7 +117,7 @@ pnpm run dev
 
 ## CI
 
-GitHub Actions runs on pull requests to `main`: installs dependencies with pnpm and runs `pnpm run build` (see `.github/workflows/ci.yaml`).
+GitHub Actions runs on pull requests to `main`: installs dependencies with pnpm, runs `pnpm run lint`, then `pnpm run build` (see `.github/workflows/ci.yaml`).
 
 ## License
 

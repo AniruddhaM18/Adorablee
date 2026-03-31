@@ -168,6 +168,15 @@ export async function editProjectChat(req: Request, res: Response) {
         const latestMessage = messages[messages.length - 1];
         const chatHistory = messages.slice(0, -1);
 
+        const preview =
+            typeof latestMessage.content === "string"
+                ? latestMessage.content.slice(0, 120)
+                : "";
+        console.log("editProjectChat: user message received", {
+            projectId,
+            preview: preview.length ? preview : "(non-string content)",
+        });
+
         // Run the edit agent
         const fileChanges = await runEditAgentStream(
             currentFiles,
