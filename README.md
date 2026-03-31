@@ -76,18 +76,12 @@ CLOUDFLARE_API_TOKEN=""
 
 # Frontend URL(s) for CORS — comma-separated if you need more than one origin
 FRONTEND_URL="http://localhost:3000,http://127.0.0.1:3000"
-# Production example:
-# FRONTEND_URL="https://adorable.fun,https://www.adorablee.fun"
-# Cross-site auth cookies in production (when frontend and backend are on different domains)
-# SESSION_COOKIE_SAMESITE="none"
 ```
 
 For the Next.js app (`apps/web`):
 
 ```env
 NEXT_PUBLIC_BACKEND_URL="http://localhost:3001"
-# Production example:
-# NEXT_PUBLIC_BACKEND_URL="https://api.adorablee.fun"
 ```
 
 ### 3. Database
