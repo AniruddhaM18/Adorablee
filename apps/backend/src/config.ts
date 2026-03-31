@@ -26,12 +26,17 @@ function requireProdEnv(name: string): string {
 
 /** Comma-separated browser origins allowed for CORS (e.g. `https://app.example.com,https://preview.example.com`). */
 export function getCorsAllowedOrigins(): string[] {
-  const raw =
+  const raw = process.env.FRONTEND_URL?.trim();
+  const fallback =
     process.env.NODE_ENV === "production"
-      ? requireProdEnv("FRONTEND_URL")
-      : (process.env.FRONTEND_URL?.trim() ??
-        "http://localhost:3000,http://127.0.0.1:3000");
+      ? "https://adorablee.fun,https://www.adorablee.fun,https://adorable.fun"
+      : "http://localhost:3000,http://127.0.0.1:3000";
   return raw
+    ? raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : fallback
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
