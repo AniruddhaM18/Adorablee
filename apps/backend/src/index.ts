@@ -21,24 +21,28 @@ if (trustProxy) {
 app.use(helmet());
 
 const corsOrigins = getCorsAllowedOrigins();
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(null, false);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  })
-);
-
+// app.use(
+//   cors({
+//     origin(origin, callback) {
+//       if (!origin) {
+//         callback(null, true);
+//         return;
+//       }
+//       if (corsOrigins.includes(origin)) {
+//         callback(null, true);
+//         return;
+//       }
+//       callback(null, false);
+//     },
+//     credentials: true,
+//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   })
+// );
+app.use(cors({
+  origin:"*",
+  methods:["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials:true,
+}))
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 
