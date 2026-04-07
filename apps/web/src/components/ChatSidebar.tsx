@@ -198,9 +198,12 @@ export function ChatSidebar({ projectId, modelKey, onFilesUpdate }: ChatSidebarP
               }
 
               // Handle version created - full files update
-              if (data.type === "version_created" && onFilesUpdate) {
-                console.log("Version created! Files:", Object.keys(data.files));
-                onFilesUpdate(data.files);
+              if (data.type === "version_created") {
+                setIsLoading(false);
+                if (onFilesUpdate && data.files) {
+                  console.log("Version created! Files:", Object.keys(data.files));
+                  onFilesUpdate(data.files);
+                }
               }
 
               if (data.type === "done") {
