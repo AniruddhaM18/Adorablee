@@ -156,12 +156,35 @@ export async function editProjectChat(req: Request, res: Response) {
         });
     }
 
-    // SSE headers
+    // Long LLM + sandbox validation can exceed default socket / proxy idle limits.
+    req.socket.setTimeout(0);
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
-    res.write(": connected\n\n");
+
+    const writeComment = (text: string) => {
+        try {
+            res.write(`: ${text}\n\n`);
+        } catch {
+            // Socket already closed
+        }
+    };
+
+    const sendSseData = (event: object) => {
+        try {
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+        } catch {
+            // Socket already closed
+        }
+    };
+
+    writeComment("connected");
+
+    const PING_MS = 15_000;
+    const pingInterval = setInterval(() => writeComment("ping"), PING_MS);
 
     try {
         // Get the latest user message
@@ -183,7 +206,7 @@ export async function editProjectChat(req: Request, res: Response) {
             latestMessage.content,
             chatHistory,
             (event) => {
-                res.write(`data: ${JSON.stringify(event)}\n\n`);
+                sendSseData(event);
             },
             openRouterModel,
             resolvedApiKey
@@ -207,7 +230,7 @@ export async function editProjectChat(req: Request, res: Response) {
 
                 while (!buildSuccess && fixAttempts < MAX_FIX_ATTEMPTS) {
                     // Write files temporarily to sandbox for validation
-                    res.write(`data: ${JSON.stringify({ type: "status", message: "Validating code..." })}\n\n`);
+                    sendSseData({ type: "status", message: "Validating code..." });
                     console.log(`Validation attempt ${fixAttempts + 1}: Writing files to sandbox for validation`);
 
                     try {
@@ -230,17 +253,17 @@ export async function editProjectChat(req: Request, res: Response) {
                             console.log(`Build failed (attempt ${fixAttempts}/${MAX_FIX_ATTEMPTS}). Errors:\n${validation.errors}`);
 
                             if (fixAttempts < MAX_FIX_ATTEMPTS) {
-                                res.write(`data: ${JSON.stringify({
+                                sendSseData({
                                     type: "status",
-                                    message: `Fixing errors (attempt ${fixAttempts}/${MAX_FIX_ATTEMPTS})...`
-                                })}\n\n`);
+                                    message: `Fixing errors (attempt ${fixAttempts}/${MAX_FIX_ATTEMPTS})...`,
+                                });
 
                                 // Run AI error fix
                                 const fixChanges = await runErrorFixStream(
                                     currentFilesToValidate,
                                     validation.errors || "Build failed with unknown errors",
                                     (event) => {
-                                        res.write(`data: ${JSON.stringify(event)}\n\n`);
+                                        sendSseData(event);
                                     },
                                     openRouterModel,
                                     resolvedApiKey
@@ -255,10 +278,11 @@ export async function editProjectChat(req: Request, res: Response) {
                                 }
                             } else {
                                 // Max retries reached - still save but warn user
-                                res.write(`data: ${JSON.stringify({
+                                sendSseData({
                                     type: "warning",
-                                    message: "Build validation failed after max retries. Code saved but may contain errors."
-                                })}\n\n`);
+                                    message:
+                                        "Build validation failed after max retries. Code saved but may contain errors.",
+                                });
                                 updatedFiles = currentFilesToValidate;
                             }
                         }
@@ -296,23 +320,20 @@ export async function editProjectChat(req: Request, res: Response) {
 
             // Notify frontend about the completed update
             console.log(`Sending version_created event with ${Object.keys(updatedFiles).length} files`);
-            res.write(
-                `data: ${JSON.stringify({
-                    type: "version_created",
-                    versionId: newVersion.id,
-                    files: updatedFiles,
-                })}\n\n`
-            );
+            sendSseData({
+                type: "version_created",
+                versionId: newVersion.id,
+                files: updatedFiles,
+            });
         }
     } catch (err) {
         console.error("Edit agent error:", err);
-        res.write(
-            `data: ${JSON.stringify({
-                type: "error",
-                message: "Failed to process edit request",
-            })}\n\n`
-        );
+        sendSseData({
+            type: "error",
+            message: "Failed to process edit request",
+        });
     } finally {
+        clearInterval(pingInterval);
         res.end();
     }
 }
